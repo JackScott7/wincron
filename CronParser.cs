@@ -12,7 +12,7 @@ internal class CronParser
     private static string[] GetCronsAsArray(string config)
     {
         return config.Split([Environment.NewLine], StringSplitOptions.None)
-            .Where(line => !(line.TrimStart().StartsWith("#") || string.IsNullOrWhiteSpace(line)))
+            .Where(line => !(line.TrimStart().StartsWith('#') || string.IsNullOrWhiteSpace(line)))
             .ToArray();
     }
 
@@ -34,7 +34,7 @@ internal class CronParser
 
         if (config.Length == 0)
         {
-            Console.WriteLine("The File is empty, no cros detected");
+            Console.WriteLine(".wc File is empty, no crons detected");
             return false;
         }
 
