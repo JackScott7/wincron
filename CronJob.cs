@@ -31,7 +31,27 @@ internal class CronJob(string minute, string hour, string dayOfMonth, string mon
         var stdout = process.StandardOutput.ReadToEnd();
         var stderr = process.StandardError.ReadToEnd();
         File.AppendAllText("C:\\Users\\clone\\wincron\\output\\stdout.log", $"{this}\n{stdout}");
-        File.AppendAllText("C:\\Users\\clone\\wincron\\output\\stdout.log", $"{this}\n{stderr}");
+        if (!string.IsNullOrEmpty(stderr))
+        {
+            File.AppendAllText("C:\\Users\\clone\\wincron\\output\\stderr.log", $"{this}\n{stderr}");
+        }
+    }
+
+    public bool ShouldRunNow(DateTime now)
+    {
+        // cron order: minute hour dayOfMonth month dayOfWeek
+        // DayOfWeek: Sunday=0 ... Saturday=6 (matches typical cron 0..6 with Sunday=0)
+        return Match(this.Minute, now.Minute)
+            && Match(this.Hour, now.Hour)
+            && Match(this.DayOfMonth, now.Day)
+            && Match(this.Month, now.Month)
+            && Match(this.DayOfWeek, (int)now.DayOfWeek);
+    }
+
+    private static bool Match(string field, int value)
+    {
+        // keep it ultra-simple: "*" or exact number
+        return field == "*" || field == value.ToString();
     }
 
     public override string ToString()
