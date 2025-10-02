@@ -39,19 +39,25 @@ internal class CronJob(string minute, string hour, string dayOfMonth, string mon
 
     public bool ShouldRunNow(DateTime now)
     {
-        // cron order: minute hour dayOfMonth month dayOfWeek
-        // DayOfWeek: Sunday=0 ... Saturday=6 (matches typical cron 0..6 with Sunday=0)
-        return Match(this.Minute, now.Minute)
-            && Match(this.Hour, now.Hour)
-            && Match(this.DayOfMonth, now.Day)
-            && Match(this.Month, now.Month)
-            && Match(this.DayOfWeek, (int)now.DayOfWeek);
+        return Match(this.Minute, now.Minute, 0)
+            && Match(this.Hour, now.Hour, 0)
+            && Match(this.DayOfMonth, now.Day, 1)
+            && Match(this.Month, now.Month, 1)
+            && Match(this.DayOfWeek, (int)now.DayOfWeek, 0);
     }
 
-    private static bool Match(string field, int value)
+    private static bool Match(string field, int value, int baseline)
     {
-        // keep it ultra-simple: "*" or exact number
-        return field == "*" || field == value.ToString();
+        if (field == "*") return true;
+
+        if (field.StartsWith("*/", StringComparison.Ordinal)) // if this date starts with */, e.g */5, */15
+        {
+            if (int.TryParse(field.AsSpan(2), out var step) && step > 0)
+                return ((value - baseline) % step) == 0;
+            return false;
+        }
+
+        return int.TryParse(field, out var exact) && value == exact;
     }
 
     public override string ToString()
