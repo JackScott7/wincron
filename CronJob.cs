@@ -1,16 +1,40 @@
 ﻿using System.Diagnostics;
 
 namespace WinCron;
-internal class CronJob(string minute, string hour, string dayOfMonth, string month, string dayOfWeek, string command, string args)
+/// <summary>
+/// Base CronJob class that represents a Cron Job
+/// </summary>
+internal class CronJob
 {
-    public string Minute { get; set; } = minute;
-    public string Hour { get; set; } = hour;
-    public string DayOfMonth { get; set; } = dayOfMonth;
-    public string Month { get; set; } = month;
-    public string DayOfWeek { get; set; } = dayOfWeek;
-    public string Command { get; set; } = command;
-    public string? Args { get; set; } = args;
+    public string Minute { get; set; }
+    public string Hour { get; set; }
+    public string DayOfMonth { get; set; }
+    public string Month { get; set; }
+    public string DayOfWeek { get; set; }
+    public string Command { get; set; }
+    public string? Args { get; set; }
+    private readonly string logDirectory = Path.Combine(
+        Environment.GetEnvironmentVariable("USERPROFILE") ?? ".",
+        "wincron",
+        "output");
 
+    public CronJob(string minute, string hour, string dayOfMonth, string month, string dayOfWeek, string command, string args)
+    {
+        this.Minute = minute;
+        this.Hour = hour;
+        this.DayOfMonth = dayOfMonth;
+        this.Month = month;
+        this.DayOfWeek = dayOfWeek;
+        this.Command = command;
+        this.Args = args;
+
+        // Creates the directory only if it doesn't exist
+        Directory.CreateDirectory(logDirectory);
+    }
+
+    /// <summary>
+    /// Run this CronJob with the specified command + args (if any)
+    /// </summary>
     public void Run()
     {
         Console.WriteLine($"[+] Running {this.Command} with Args: {this.Args}");
@@ -28,15 +52,22 @@ internal class CronJob(string minute, string hour, string dayOfMonth, string mon
         };
         process.Start();
         process.WaitForExit();
+        
         var stdout = process.StandardOutput.ReadToEnd();
         var stderr = process.StandardError.ReadToEnd();
-        File.AppendAllText("C:\\Users\\clone\\wincron\\output\\stdout.log", $"{this}\n{stdout}");
+        
+        File.AppendAllText($@"{this.logDirectory}\stdout.log", $"{this}\n{stdout}");
+
         if (!string.IsNullOrEmpty(stderr))
         {
-            File.AppendAllText("C:\\Users\\clone\\wincron\\output\\stderr.log", $"{this}\n{stderr}");
+            File.AppendAllText($@"{this.logDirectory}\stderr.log", $"{this}\n{stderr}");
         }
     }
 
+    /// <summary>
+    /// Dictates whether this CronJob should run now at this moment tick
+    /// </summary>
+    /// <returns>true if should run now, false otherwise</returns>
     public bool ShouldRunNow(DateTime now)
     {
         return Match(this.Minute, now.Minute, 0)
