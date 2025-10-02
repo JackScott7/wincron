@@ -1,12 +1,19 @@
 ﻿using System.Text.RegularExpressions;
 
 namespace WinCron;
+/// <summary>
+/// Base Cron Parser class, exposes .Parse() that will parse WinCron's config.wc file
+/// </summary>
 internal class CronParser
 {
-    // TODO: Implement Logging to file
     public List<CronJob> Crons { get; set; } = [];
     private readonly string cronConfPath = $@"{Environment.GetEnvironmentVariable("USERPROFILE")}\config.wc";
     private readonly string confData = "";
+
+    /// <summary>
+    /// Parses config.wc file and returns whether Parsing was successfull or not
+    /// </summary>
+    /// <returns>Success parsing or not</returns>
     public bool Parse() => this.IsValidCron(this.confData);
 
     private static string[] GetCronsAsArray(string config)
@@ -18,9 +25,12 @@ internal class CronParser
 
     private static bool ParseCron(string cron)
     {
-        string[] parts = cron.Trim().Split(" ");
+        string[] parts = Regex.Split(cron.Trim(), @"\s+");
+
+        Regex regexFieldMatch = new(@"^(?:\*|\d+|\*/\d+)$", RegexOptions.Compiled);
+
         for (int i = 0; i < 5; i++) {
-            if (!Regex.Match(parts[i], "\\*|\\d").Success)
+            if (!regexFieldMatch.IsMatch(parts[i]))
             {
                 return false;
             }
