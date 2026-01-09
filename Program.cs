@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Nodes;
-using WinCron;
+﻿using WinCron.lib;
 
 CronParser parser = new();
 
@@ -9,7 +8,8 @@ if (!parser.Parse())
     return;
 }
 
-Console.WriteLine("WinCron scheduler started. Waiting for minute ticks…");
+Console.WriteLine($"WinCron started at {DateTime.Now:HH:mm:ss}.");
+Console.WriteLine($"Loaded {parser.Crons.Lenght} crons.");
 
 int lastMinute = -1;
 
