@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace WinCron;
+namespace WinCron.lib;
 /// <summary>
 /// Base Cron Parser class, exposes .Parse() that will parse WinCron's config.wc file
 /// </summary>

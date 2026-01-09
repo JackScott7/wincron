@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace WinCron;
+namespace WinCron.lib;
 /// <summary>
 /// Base CronJob class that represents a Cron Job
 /// </summary>
