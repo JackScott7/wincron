@@ -2,9 +2,16 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <SignAssembly>True</SignAssembly>
+    <Title>WinCron</Title>
+    <Description>WinCron is the windows implementation of linux's cron</Description>
+    <PackageProjectUrl>https://wincron.syntaxly.xyz</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/JackScott7/wincron</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
 </Project>
