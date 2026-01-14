@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace WinCron.lib;
 /// <summary>
@@ -35,32 +36,43 @@ internal class CronJob
     /// <summary>
     /// Run this CronJob with the specified command + args (if any)
     /// </summary>
-    public void Run()
+    async public void Run()
     {
         Console.WriteLine($"[+] Running {this.Command} with Args: {this.Args}");
-        Process process = new()
+        try
         {
-            StartInfo =
+            Process process = new()
             {
-                FileName = this.Command,
-                Arguments = this.Args,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-            }
-        };
-        process.Start();
-        process.WaitForExit();
-        
-        var stdout = process.StandardOutput.ReadToEnd();
-        var stderr = process.StandardError.ReadToEnd();
-        
-        File.AppendAllText($@"{this.logDirectory}\stdout.log", $"{this}\n{stdout}");
+                StartInfo =
+                {
+                    FileName = this.Command,
+                    Arguments = this.Args,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardInput = true,
+                    StandardInputEncoding = Encoding.UTF8,
+                    StandardOutputEncoding = Encoding.UTF8,
+                }
+            };
+            process.Start();
 
-        if (!string.IsNullOrEmpty(stderr))
+            await process.WaitForExitAsync();
+
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+
+            File.AppendAllText($@"{this.logDirectory}\stdout.log", $"[{DateTime.Now}] {this}\n{stdout}");
+
+            if (!string.IsNullOrEmpty(stderr))
+            {
+                File.AppendAllText($@"{this.logDirectory}\stderr.log", $"[{DateTime.Now}] {this}\n{stderr}");
+            }
+        }
+        catch (Exception ex)
         {
-            File.AppendAllText($@"{this.logDirectory}\stderr.log", $"{this}\n{stderr}");
+            File.AppendAllText($@"{this.logDirectory}\stderr.log", $"[{DateTime.Now}] {this}\n{ex.Message}");
         }
     }
 
