@@ -9,7 +9,7 @@ if (!parser.Parse())
 }
 
 Console.WriteLine($"WinCron started at {DateTime.Now:HH:mm:ss}.");
-Console.WriteLine($"Loaded {parser.Crons.Lenght} crons.");
+Console.WriteLine($"Loaded {parser.Crons.Count} crons.");
 
 int lastMinute = -1;
 
@@ -21,14 +21,12 @@ while (true)
     {
         lastMinute = now.Minute;
 
-        foreach (var job in parser.Crons)
-        {
-            if (job.ShouldRunNow(now))
-            {
-                Console.WriteLine($"[{now:yyyy-MM-dd HH:mm:ss}] running → {job.Command}");
-                job.Run();
-            }
-        }
+        var runnableJobs = (from _ in parser.Crons
+                            where _.ShouldRunNow(now)
+                            select _).ToList<CronJob>();
+
+        runnableJobs.ForEach(job => job.Run());
+
     }
 
     Thread.Sleep(1000);
