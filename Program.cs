@@ -15,7 +15,7 @@ int lastMinute = -1;
 
 while (true)
 {
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     if (now.Second == 0 && now.Minute != lastMinute)
     {
