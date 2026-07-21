@@ -2,3 +2,5 @@ bin/
 obj/
 .vs/
 TestResults/
+assets/*-v*.png
+assets/*-v*.ico
