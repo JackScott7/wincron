@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-21
+
 ### Added
 
 - Added command-line support for configuration overrides, syntax testing, configuration listing, version output, help output, and stable success/runtime/usage exit codes.
