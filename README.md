@@ -56,6 +56,28 @@ dotnet run --project WinCron.csproj
 
 Press `Ctrl+C` for graceful shutdown.
 
+## Command line
+
+Running `wincron` without arguments starts the scheduler with `%USERPROFILE%\wincron\config.wc`.
+
+| Argument | Behavior |
+| --- | --- |
+| `--config <path>` | Use a different configuration file. `--config=<path>` is also accepted. |
+| `-T`, `--test` | Validate the selected configuration and exit without running jobs. |
+| `-l`, `--list` | Print the selected configuration and exit. |
+| `-V`, `--version` | Print the WinCron version and exit. |
+| `-h`, `--help` | Print usage information and exit. |
+
+`--config` can be combined with normal execution, `--test`, or `--list`:
+
+```powershell
+wincron --config C:\jobs\custom.wc
+wincron --test --config C:\jobs\custom.wc
+wincron --list --config C:\jobs\custom.wc
+```
+
+Successful operations return exit code `0`, invalid configurations or runtime failures return `1`, and invalid command-line usage returns `2`.
+
 ## Configuration
 
 Each job contains five schedule fields followed by its command:

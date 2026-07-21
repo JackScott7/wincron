@@ -1,0 +1,163 @@
+using WinCron.CommandLine;
+using WinCron.Configuration;
+using WinCron.Execution;
+using WinCron.Scheduling;
+
+namespace WinCron.Application;
+
+public sealed class WinCronApplication
+{
+    public const int SuccessExitCode = 0;
+    public const int RuntimeErrorExitCode = 1;
+    public const int UsageErrorExitCode = 2;
+
+    private readonly TextWriter standardOutput;
+    private readonly TextWriter standardError;
+
+    public WinCronApplication(TextWriter standardOutput, TextWriter standardError)
+    {
+        this.standardOutput = standardOutput ?? throw new ArgumentNullException(nameof(standardOutput));
+        this.standardError = standardError ?? throw new ArgumentNullException(nameof(standardError));
+    }
+
+    public async Task<int> RunAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken = default)
+    {
+        var commandLineResult = WinCronCommandLineParser.Parse(arguments);
+        if (!commandLineResult.IsValid)
+        {
+            foreach (var error in commandLineResult.Errors)
+            {
+                await standardError.WriteLineAsync($"WinCron: {error}");
+            }
+
+            await standardError.WriteLineAsync();
+            await standardError.WriteLineAsync(WinCronUsage.Text);
+            return UsageErrorExitCode;
+        }
+
+        var options = commandLineResult.Options!;
+
+        try
+        {
+            return options.Mode switch
+            {
+                WinCronCommandMode.Help => await PrintHelpAsync(),
+                WinCronCommandMode.Version => await PrintVersionAsync(),
+                WinCronCommandMode.Test => await TestConfigurationAsync(options, cancellationToken),
+                WinCronCommandMode.List => await ListConfigurationAsync(options, cancellationToken),
+                WinCronCommandMode.Run => await RunSchedulerAsync(options, cancellationToken),
+                _ => throw new InvalidOperationException($"Unsupported command mode '{options.Mode}'.")
+            };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return SuccessExitCode;
+        }
+        catch (Exception exception)
+        {
+            await standardError.WriteLineAsync($"WinCron: {exception.Message}");
+            return RuntimeErrorExitCode;
+        }
+    }
+
+    private async Task<int> PrintHelpAsync()
+    {
+        await standardOutput.WriteLineAsync(WinCronUsage.Text);
+        return SuccessExitCode;
+    }
+
+    private async Task<int> PrintVersionAsync()
+    {
+        var assemblyVersion = typeof(WinCronApplication).Assembly.GetName().Version
+            ?? throw new InvalidOperationException("The WinCron assembly version is unavailable.");
+        var semanticVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
+
+        await standardOutput.WriteLineAsync($"WinCron {semanticVersion}");
+        return SuccessExitCode;
+    }
+
+    private async Task<int> TestConfigurationAsync(
+        WinCronCommandLineOptions options,
+        CancellationToken cancellationToken)
+    {
+        var (loader, parseResult) = await LoadAndParseConfigurationAsync(options, cancellationToken);
+        if (!parseResult.IsValid)
+        {
+            await WriteConfigurationErrorsAsync(parseResult.Errors);
+            return RuntimeErrorExitCode;
+        }
+
+        await standardOutput.WriteLineAsync(
+            $"Configuration is valid. Loaded {parseResult.Configuration.Jobs.Count} job(s) from {loader.ConfigurationPath}.");
+        return SuccessExitCode;
+    }
+
+    private async Task<int> ListConfigurationAsync(
+        WinCronCommandLineOptions options,
+        CancellationToken cancellationToken)
+    {
+        var loader = CreateConfigurationLoader(options.ConfigurationPath);
+        var configurationText = await loader.LoadAsync(cancellationToken);
+        await standardOutput.WriteAsync(configurationText);
+        return SuccessExitCode;
+    }
+
+    private async Task<int> RunSchedulerAsync(
+        WinCronCommandLineOptions options,
+        CancellationToken cancellationToken)
+    {
+        var (loader, parseResult) = await LoadAndParseConfigurationAsync(options, cancellationToken);
+        if (!parseResult.IsValid)
+        {
+            await WriteConfigurationErrorsAsync(parseResult.Errors);
+            return RuntimeErrorExitCode;
+        }
+
+        await standardOutput.WriteLineAsync(
+            $"WinCron loaded {parseResult.Configuration.Jobs.Count} job(s) from {loader.ConfigurationPath}.");
+        await standardOutput.WriteLineAsync(
+            $"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
+
+        using var fileExecutionLogger = new JsonFileJobExecutionLogger();
+        using var consoleExecutionLogger = new ConsoleJobExecutionLogger(standardOutput, standardError);
+        var executionLogger = new CompositeJobExecutionLogger(consoleExecutionLogger, fileExecutionLogger);
+        var jobExecutor = new JobExecutor(executionLogger);
+        var scheduler = new CronScheduler(
+            parseResult.Configuration.Jobs,
+            jobExecutor,
+            new CronSchedulerOptions
+            {
+                TimeZone = TimeZoneInfo.Local,
+                MisfireGracePeriod = TimeSpan.FromMinutes(1)
+            });
+
+        await scheduler.RunAsync(cancellationToken);
+        return SuccessExitCode;
+    }
+
+    private static CronConfigurationLoader CreateConfigurationLoader(string? configurationPath) =>
+        configurationPath is null
+            ? new CronConfigurationLoader()
+            : new CronConfigurationLoader(configurationPath);
+
+    private static async Task<(CronConfigurationLoader Loader, CronConfigurationParseResult ParseResult)>
+        LoadAndParseConfigurationAsync(
+            WinCronCommandLineOptions options,
+            CancellationToken cancellationToken)
+    {
+        var loader = CreateConfigurationLoader(options.ConfigurationPath);
+        var configurationText = await loader.LoadAsync(cancellationToken);
+        var parser = new CronConfigurationParser();
+        return (loader, parser.Parse(configurationText));
+    }
+
+    private async Task WriteConfigurationErrorsAsync(IReadOnlyList<CronParseError> errors)
+    {
+        foreach (var error in errors)
+        {
+            await standardError.WriteLineAsync(error.ToString());
+        }
+    }
+}

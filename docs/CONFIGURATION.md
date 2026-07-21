@@ -82,6 +82,26 @@ Every execution records:
 
 Completed jobs print their status, duration, standard output, and standard error in the WinCron terminal. Records are also appended as one JSON object per line to `%USERPROFILE%\wincron\output\runs.jsonl`. Press `Ctrl+C` to stop WinCron; active child process trees are terminated so they are not orphaned.
 
+## Command-line arguments
+
+WinCron starts the scheduler when invoked without arguments. The following arguments are supported:
+
+```text
+wincron [--config <path>]
+wincron (-T | --test) [--config <path>]
+wincron (-l | --list) [--config <path>]
+wincron (-V | --version)
+wincron (-h | --help)
+```
+
+- `--config <path>` or `--config=<path>` selects a non-default configuration.
+- `-T` or `--test` validates the selected configuration and exits without executing jobs.
+- `-l` or `--list` writes the selected configuration to standard output.
+- `-V` or `--version` writes the semantic version.
+- `-h` or `--help` writes usage information.
+
+Exit code `0` means success, `1` means configuration or runtime failure, and `2` means invalid command-line usage.
+
 ## Build and test
 
 ```powershell
