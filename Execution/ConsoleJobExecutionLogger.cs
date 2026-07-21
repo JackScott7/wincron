@@ -7,17 +7,20 @@ public sealed class ConsoleJobExecutionLogger : IJobExecutionLogger, IDisposable
     private readonly TextWriter standardOutputWriter;
     private readonly TextWriter standardErrorWriter;
     private readonly TimeZoneInfo displayTimeZone;
+    private readonly bool includeCapturedOutput;
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private bool isDisposed;
 
     public ConsoleJobExecutionLogger(
         TextWriter? standardOutputWriter = null,
         TextWriter? standardErrorWriter = null,
-        TimeZoneInfo? displayTimeZone = null)
+        TimeZoneInfo? displayTimeZone = null,
+        bool includeCapturedOutput = true)
     {
         this.standardOutputWriter = standardOutputWriter ?? Console.Out;
         this.standardErrorWriter = standardErrorWriter ?? Console.Error;
         this.displayTimeZone = displayTimeZone ?? TimeZoneInfo.Local;
+        this.includeCapturedOutput = includeCapturedOutput;
     }
 
     public async Task WriteAsync(JobExecutionResult result, CancellationToken cancellationToken = default)
@@ -35,13 +38,13 @@ public sealed class ConsoleJobExecutionLogger : IJobExecutionLogger, IDisposable
             await standardOutputWriter.WriteLineAsync(
                 $"[{completedAtLocal:yyyy-MM-dd HH:mm:ss zzz}] {result.JobId} {outcome} in {durationMilliseconds} ms: {result.CommandText}");
 
-            if (!string.IsNullOrEmpty(result.StandardOutput))
+            if (includeCapturedOutput && !string.IsNullOrEmpty(result.StandardOutput))
             {
                 await standardOutputWriter.WriteAsync(result.StandardOutput);
                 await WriteTrailingNewLineIfNeededAsync(standardOutputWriter, result.StandardOutput);
             }
 
-            if (!string.IsNullOrEmpty(result.StandardError))
+            if (includeCapturedOutput && !string.IsNullOrEmpty(result.StandardError))
             {
                 await standardErrorWriter.WriteAsync(result.StandardError);
                 await WriteTrailingNewLineIfNeededAsync(standardErrorWriter, result.StandardError);
@@ -74,6 +77,11 @@ public sealed class ConsoleJobExecutionLogger : IJobExecutionLogger, IDisposable
         if (result.WasCanceled)
         {
             return "was canceled";
+        }
+
+        if (result.TimedOut)
+        {
+            return "timed out";
         }
 
         if (result.ErrorMessage is not null)

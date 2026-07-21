@@ -58,6 +58,18 @@ REPORT_MODE=weekly
 
 `WINCRON_WORKING_DIRECTORY` sets the working directory for subsequent jobs and is also available to their processes. Without it, jobs use the current user's profile directory.
 
+## Execution controls
+
+The following assignments also apply to subsequent jobs:
+
+| Variable | Values | Default |
+| --- | --- | --- |
+| `WINCRON_OVERLAP_POLICY` | `Allow`, `Skip`, `QueueOne`, or `TerminatePrevious` | `Skip` |
+| `WINCRON_TIMEOUT_SECONDS` | Positive number of seconds | `3600` |
+| `WINCRON_MAX_OUTPUT_CHARACTERS` | Positive captured-character limit for each output stream | `1048576` |
+
+`QueueOne` keeps only the most recently scheduled pending occurrence. `TerminatePrevious` cancels the active execution and starts its replacement after termination completes. These control variables remain available in the child-process environment for backward compatibility with environment assignment behavior.
+
 ## Scheduling semantics
 
 - Schedules use the Windows local time zone. Internally, occurrences are ordered as UTC instants.
@@ -71,16 +83,16 @@ REPORT_MODE=weekly
 
 ## Command execution and logs
 
-Commands run through `%COMSPEC%`—normally `cmd.exe`—using `/D /S /C`. WinCron runs different due jobs concurrently and waits for active jobs during graceful shutdown.
+Commands run through `%COMSPEC%`—normally `cmd.exe`—using `/D /S /C`. Different jobs may run concurrently, while each job follows its configured overlap policy. A named lock prevents two WinCron processes from scheduling the same normalized configuration path.
 
 Every execution records:
 
 - Scheduled, start, and completion timestamps.
 - Duration and exit code.
-- Standard output and standard error.
-- Cancellation state or process-start error.
+- Bounded standard output and standard error with truncation flags.
+- Cancellation, timeout, or process-start error state.
 
-Completed jobs print their status, duration, standard output, and standard error in the WinCron terminal. Records are also appended as one JSON object per line to `%USERPROFILE%\wincron\output\runs.jsonl`. Press `Ctrl+C` to stop WinCron; active child process trees are terminated so they are not orphaned.
+Standard output and error are streamed to the WinCron terminal while jobs run. Completed jobs print their outcome and duration. Records are appended as one JSON object per line to `%USERPROFILE%\wincron\output\runs.jsonl`; the active log rotates at 10 MiB and retains five rotated files. Press `Ctrl+C` to stop WinCron; active child process trees are terminated with a bounded wait.
 
 ## Command-line arguments
 

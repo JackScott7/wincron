@@ -110,6 +110,7 @@ public sealed class WinCronApplication
         CancellationToken cancellationToken)
     {
         var loader = CreateConfigurationLoader(options.ConfigurationPath);
+        using var instanceLock = WinCronInstanceLock.Acquire(loader.ConfigurationPath);
         var configurationText = await loader.LoadAsync(cancellationToken);
         var parseResult = new CronConfigurationParser().Parse(configurationText);
         if (!parseResult.IsValid)
@@ -129,12 +130,21 @@ public sealed class WinCronApplication
             $"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
 
         using var fileExecutionLogger = new JsonFileJobExecutionLogger();
-        using var consoleExecutionLogger = new ConsoleJobExecutionLogger(standardOutput, standardError);
-        var executionLogger = new CompositeJobExecutionLogger(consoleExecutionLogger, fileExecutionLogger);
-        var jobExecutor = new JobExecutor(executionLogger);
+        using var consoleExecutionLogger = new ConsoleJobExecutionLogger(
+            standardOutput,
+            standardError,
+            includeCapturedOutput: false);
+        using var outputObserver = new TextWriterJobOutputObserver(standardOutput, standardError);
+        var logFailureReporter = new TextWriterExecutionLogFailureReporter(standardError);
+        var executionLogger = new CompositeJobExecutionLogger(
+            logFailureReporter,
+            consoleExecutionLogger,
+            fileExecutionLogger);
+        var jobExecutor = new JobExecutor(executionLogger, outputObserver: outputObserver);
+        var jobDispatcher = new ConcurrencyControlledJobDispatcher(jobExecutor);
         var scheduler = new CronScheduler(
             parseResult.Configuration.Jobs,
-            jobExecutor,
+            jobDispatcher,
             new CronSchedulerOptions
             {
                 TimeZone = TimeZoneInfo.Local,

@@ -65,6 +65,39 @@ public sealed class JobExecutorIntegrationTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(result.ErrorMessage));
     }
 
+    [Fact]
+    public async Task DispatchAsyncLimitsCapturedOutputWhileStreamingCompleteOutput()
+    {
+        Directory.CreateDirectory(temporaryDirectory);
+        var logger = new RecordingExecutionLogger();
+        var observer = new RecordingOutputObserver();
+        var executor = new JobExecutor(logger, outputObserver: observer);
+        var job = CreateJob("echo 123456789", maximumOutputCharacters: 5);
+
+        await executor.DispatchAsync(job, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        var result = Assert.Single(logger.Results);
+        Assert.Equal("12345", result.StandardOutput);
+        Assert.True(result.StandardOutputTruncated);
+        Assert.Contains("123456789", observer.Output.ToString());
+    }
+
+    [Fact]
+    public async Task DispatchAsyncTerminatesAndRecordsTimedOutCommand()
+    {
+        Directory.CreateDirectory(temporaryDirectory);
+        var logger = new RecordingExecutionLogger();
+        var executor = new JobExecutor(logger);
+        var job = CreateJob("ping.exe 127.0.0.1 -t", timeout: TimeSpan.FromMilliseconds(100));
+
+        await executor.DispatchAsync(job, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        var result = Assert.Single(logger.Results);
+        Assert.True(result.TimedOut);
+        Assert.False(result.Succeeded);
+        Assert.False(result.WasCanceled);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(temporaryDirectory))
@@ -75,7 +108,9 @@ public sealed class JobExecutorIntegrationTests : IDisposable
 
     private CronJobDefinition CreateJob(
         string command,
-        IReadOnlyDictionary<string, string>? environment = null)
+        IReadOnlyDictionary<string, string>? environment = null,
+        TimeSpan? timeout = null,
+        int maximumOutputCharacters = 1_048_576)
     {
         var expression = new CronExpression(
             Parse(CronFieldKind.Minute),
@@ -88,7 +123,12 @@ public sealed class JobExecutorIntegrationTests : IDisposable
             command,
             environment ?? new Dictionary<string, string>(),
             temporaryDirectory,
-            1);
+            1,
+            new JobExecutionOptions
+            {
+                Timeout = timeout ?? TimeSpan.FromHours(1),
+                MaximumCapturedCharactersPerStream = maximumOutputCharacters
+            });
     }
 
     private static CronField Parse(CronFieldKind kind)
@@ -104,6 +144,21 @@ public sealed class JobExecutorIntegrationTests : IDisposable
         public Task WriteAsync(JobExecutionResult result, CancellationToken cancellationToken = default)
         {
             Results.Add(result);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingOutputObserver : IJobOutputObserver
+    {
+        public System.Text.StringBuilder Output { get; } = new();
+
+        public Task WriteAsync(
+            string jobId,
+            JobOutputChannel channel,
+            ReadOnlyMemory<char> output,
+            CancellationToken cancellationToken)
+        {
+            Output.Append(output.Span);
             return Task.CompletedTask;
         }
     }

@@ -10,9 +10,12 @@ public sealed record JobExecutionResult(
     string StandardOutput,
     string StandardError,
     bool WasCanceled,
-    string? ErrorMessage)
+    string? ErrorMessage,
+    bool TimedOut = false,
+    bool StandardOutputTruncated = false,
+    bool StandardErrorTruncated = false)
 {
     public TimeSpan Duration => CompletedAtUtc - StartedAtUtc;
 
-    public bool Succeeded => ExitCode == 0 && !WasCanceled && ErrorMessage is null;
+    public bool Succeeded => ExitCode == 0 && !WasCanceled && !TimedOut && ErrorMessage is null;
 }

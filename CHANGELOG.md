@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-21
+
+### Added
+
+- Added per-job `Allow`, `Skip`, `QueueOne`, and `TerminatePrevious` overlap policies with a bounded one-item queue and safe `Skip` default.
+- Added per-job execution timeouts and maximum captured-output limits through scoped configuration assignments.
+- Added live stdout and stderr forwarding while retaining bounded output for structured execution records.
+- Added named single-instance locking based on the normalized configuration path.
+- Added JSON log rotation with configurable size and retention options.
+- Added timeout and output-truncation fields to structured execution results.
+
+### Changed
+
+- Changed logging sinks to fail independently so an unavailable file log does not suppress terminal reporting.
+- Changed process output collection to drain streams incrementally instead of retaining unlimited output in memory.
+
+### Fixed
+
+- Fixed long-running jobs overlapping without an explicit concurrency policy.
+- Fixed hung commands running indefinitely without a timeout.
+- Fixed multiple WinCron processes silently scheduling the same configuration.
+- Fixed the execution log growing indefinitely without rotation.
+
 ## [1.2.1] - 2026-07-21
 
 ### Changed

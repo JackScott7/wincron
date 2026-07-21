@@ -6,6 +6,9 @@ namespace WinCron.Configuration;
 public sealed partial class CronConfigurationParser
 {
     public const string WorkingDirectoryVariableName = "WINCRON_WORKING_DIRECTORY";
+    public const string OverlapPolicyVariableName = "WINCRON_OVERLAP_POLICY";
+    public const string TimeoutSecondsVariableName = "WINCRON_TIMEOUT_SECONDS";
+    public const string MaximumOutputCharactersVariableName = "WINCRON_MAX_OUTPUT_CHARACTERS";
 
     private static readonly CronFieldKind[] FieldKinds =
     [
@@ -119,12 +122,72 @@ public sealed partial class CronConfigurationParser
                 ? Environment.ExpandEnvironmentVariables(configuredDirectory)
                 : defaultWorkingDirectory;
 
+        if (!TryCreateExecutionOptions(environmentVariables, out var executionOptions, out var optionsError))
+        {
+            errors.Add(new CronParseError(lineNumber, optionsError!, line));
+            return;
+        }
+
         jobs.Add(new CronJobDefinition(
             schedule,
             commandText,
             environmentVariables,
             workingDirectory,
-            lineNumber));
+            lineNumber,
+            executionOptions));
+    }
+
+    private static bool TryCreateExecutionOptions(
+        Dictionary<string, string> environmentVariables,
+        out JobExecutionOptions options,
+        out string? error)
+    {
+        var overlapPolicy = JobOverlapPolicy.Skip;
+        var timeout = TimeSpan.FromHours(1);
+        var maximumOutputCharacters = 1_048_576;
+
+        if (environmentVariables.TryGetValue(OverlapPolicyVariableName, out var overlapText)
+            && !Enum.TryParse(overlapText, ignoreCase: true, out overlapPolicy))
+        {
+            options = JobExecutionOptions.Default;
+            error = $"{OverlapPolicyVariableName} must be Allow, Skip, QueueOne, or TerminatePrevious.";
+            return false;
+        }
+
+        if (environmentVariables.TryGetValue(TimeoutSecondsVariableName, out var timeoutText))
+        {
+            if (!double.TryParse(
+                    timeoutText,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var timeoutSeconds)
+                || timeoutSeconds <= 0
+                || timeoutSeconds > TimeSpan.MaxValue.TotalSeconds)
+            {
+                options = JobExecutionOptions.Default;
+                error = $"{TimeoutSecondsVariableName} must be a positive number of seconds.";
+                return false;
+            }
+
+            timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        }
+
+        if (environmentVariables.TryGetValue(MaximumOutputCharactersVariableName, out var outputLimitText)
+            && (!int.TryParse(outputLimitText, out maximumOutputCharacters) || maximumOutputCharacters <= 0))
+        {
+            options = JobExecutionOptions.Default;
+            error = $"{MaximumOutputCharactersVariableName} must be a positive integer.";
+            return false;
+        }
+
+        options = new JobExecutionOptions
+        {
+            OverlapPolicy = overlapPolicy,
+            Timeout = timeout,
+            MaximumCapturedCharactersPerStream = maximumOutputCharacters
+        };
+        error = null;
+        return true;
     }
 
     [GeneratedRegex(@"^\s*(?<key>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?<value>.*)$", RegexOptions.CultureInvariant)]

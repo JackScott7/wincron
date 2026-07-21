@@ -97,4 +97,36 @@ public sealed class CronConfigurationParserTests
         Assert.True(result.IsValid);
         Assert.Single(result.Configuration.Jobs);
     }
+
+    [Fact]
+    public void ParseCreatesScopedExecutionOptions()
+    {
+        const string configuration = """
+            WINCRON_OVERLAP_POLICY=QueueOne
+            WINCRON_TIMEOUT_SECONDS=30.5
+            WINCRON_MAX_OUTPUT_CHARACTERS=2048
+            * * * * * echo controlled
+            """;
+
+        var result = parser.Parse(configuration);
+
+        Assert.True(result.IsValid);
+        var options = Assert.Single(result.Configuration.Jobs).ExecutionOptions;
+        Assert.Equal(WinCron.Domain.JobOverlapPolicy.QueueOne, options.OverlapPolicy);
+        Assert.Equal(TimeSpan.FromSeconds(30.5), options.Timeout);
+        Assert.Equal(2048, options.MaximumCapturedCharactersPerStream);
+    }
+
+    [Theory]
+    [InlineData("WINCRON_OVERLAP_POLICY=invalid")]
+    [InlineData("WINCRON_TIMEOUT_SECONDS=0")]
+    [InlineData("WINCRON_MAX_OUTPUT_CHARACTERS=-1")]
+    public void ParseRejectsInvalidExecutionOption(string assignment)
+    {
+        var result = parser.Parse($"{assignment}\n* * * * * echo invalid");
+
+        Assert.False(result.IsValid);
+        Assert.Empty(result.Configuration.Jobs);
+        Assert.Equal(2, Assert.Single(result.Errors).LineNumber);
+    }
 }

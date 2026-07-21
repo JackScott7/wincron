@@ -23,6 +23,9 @@ WinCron reads a familiar five-field crontab, calculates future occurrences witho
 - Shell-compatible Windows command execution through `%COMSPEC%`.
 - Captured exit code, standard output, standard error, timestamps, and duration.
 - Graceful shutdown with child-process-tree cleanup.
+- Per-job overlap policies, execution timeouts, and bounded captured output.
+- Live job output with rotating structured JSON logs.
+- Single-instance protection for each configuration file.
 - Unit and integration test coverage.
 - Validation rejects schedules that can never produce a calendar occurrence.
 - Empty configurations keep the scheduler idle and ready instead of terminating unexpectedly.
@@ -100,17 +103,30 @@ WINCRON_WORKING_DIRECTORY=C:\jobs\reports
 0 8 * * MON-FRI powershell.exe -NoProfile -File .\report.ps1
 ```
 
+Execution controls are also scoped to subsequent jobs:
+
+```text
+# Allow, Skip, QueueOne, or TerminatePrevious; Skip is the default.
+WINCRON_OVERLAP_POLICY=QueueOne
+
+# Positive timeout in seconds and captured characters per output stream.
+WINCRON_TIMEOUT_SECONDS=900
+WINCRON_MAX_OUTPUT_CHARACTERS=1048576
+
+*/5 * * * * powershell.exe -NoProfile -File C:\jobs\report.ps1
+```
+
 See [WinCron configuration](docs/CONFIGURATION.md) for the complete grammar, matching rules, environment behavior, working-directory convention, DST policy, and logging details.
 
 ## Logs
 
-When a job finishes, WinCron prints its command, exit status, duration, standard output, and standard error in the terminal. The same execution is appended as a JSON object to:
+Standard output and standard error are forwarded to the terminal while a job runs. When it finishes, WinCron prints its command, outcome, and duration. The bounded captured output is appended as a JSON object to:
 
 ```text
 %USERPROFILE%\wincron\output\runs.jsonl
 ```
 
-Records include the scheduled occurrence, start and completion times, duration, command, exit code, standard output, standard error, cancellation state, and process-start errors.
+Records include the scheduled occurrence, start and completion times, duration, command, exit code, bounded standard output and error, truncation flags, cancellation and timeout state, and process-start errors. `runs.jsonl` rotates at 10 MiB and retains five rotated files by default.
 
 ## Testing
 

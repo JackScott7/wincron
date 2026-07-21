@@ -31,7 +31,7 @@ public sealed class WinCronApplicationTests : IDisposable
         var exitCode = await application.RunAsync(["-V"], TestContext.Current.CancellationToken);
 
         Assert.Equal(WinCronApplication.SuccessExitCode, exitCode);
-        Assert.Equal($"WinCron 1.2.1{Environment.NewLine}", output.ToString());
+        Assert.Equal($"WinCron 1.3.0{Environment.NewLine}", output.ToString());
         Assert.Equal(string.Empty, error.ToString());
     }
 

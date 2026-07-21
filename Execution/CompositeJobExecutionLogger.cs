@@ -3,8 +3,16 @@ namespace WinCron.Execution;
 public sealed class CompositeJobExecutionLogger : IJobExecutionLogger
 {
     private readonly IReadOnlyList<IJobExecutionLogger> loggers;
+    private readonly IExecutionLogFailureReporter? failureReporter;
 
     public CompositeJobExecutionLogger(params IJobExecutionLogger[] loggers)
+        : this(null, loggers)
+    {
+    }
+
+    public CompositeJobExecutionLogger(
+        IExecutionLogFailureReporter? failureReporter,
+        params IJobExecutionLogger[] loggers)
     {
         ArgumentNullException.ThrowIfNull(loggers);
 
@@ -19,8 +27,27 @@ public sealed class CompositeJobExecutionLogger : IJobExecutionLogger
         }
 
         this.loggers = Array.AsReadOnly(loggers);
+        this.failureReporter = failureReporter;
     }
 
     public Task WriteAsync(JobExecutionResult result, CancellationToken cancellationToken = default) =>
-        Task.WhenAll(loggers.Select(logger => logger.WriteAsync(result, cancellationToken)));
+        Task.WhenAll(loggers.Select(logger => WriteIsolatedAsync(logger, result, cancellationToken)));
+
+    private async Task WriteIsolatedAsync(
+        IJobExecutionLogger logger,
+        JobExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await logger.WriteAsync(result, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (failureReporter is not null)
+            {
+                await failureReporter.ReportAsync(exception, cancellationToken);
+            }
+        }
+    }
 }

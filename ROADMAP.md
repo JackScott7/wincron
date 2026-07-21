@@ -107,46 +107,46 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 ### 3.1 Overlapping job policy
 
-- [ ] Detect when a previous execution of the same job is still active.
-- [ ] Support an explicit per-job overlap policy: `allow`, `skip`, `queue-one`, or `terminate-previous`.
-- [ ] Select and document a safe default overlap policy.
+- [x] Detect when a previous execution of the same job is still active.
+- [x] Support an explicit per-job overlap policy: `allow`, `skip`, `queue-one`, or `terminate-previous`.
+- [x] Select and document a safe default overlap policy.
 - [ ] Log every skipped, queued, or terminated overlapping occurrence.
-- [ ] Prevent queued occurrences from growing without a bound.
-- [ ] Add concurrency tests for every overlap policy.
+- [x] Prevent queued occurrences from growing without a bound.
+- [x] Add concurrency tests for every overlap policy.
 
 ### 3.2 Single-instance protection
 
-- [ ] Prevent multiple WinCron processes from scheduling the same configuration simultaneously.
-- [ ] Use a named Windows mutex derived from a normalized configuration path.
-- [ ] Return a clear error when another instance owns the same configuration.
-- [ ] Permit simultaneous instances when they intentionally use different configuration files.
+- [x] Prevent multiple WinCron processes from scheduling the same configuration simultaneously.
+- [x] Use a named Windows synchronization primitive derived from a normalized configuration path.
+- [x] Return a clear error when another instance owns the same configuration.
+- [x] Permit simultaneous instances when they intentionally use different configuration files.
 - [ ] Add multi-process tests for mutex acquisition, release, and abandoned ownership.
 
 ### 3.3 Execution timeouts
 
-- [ ] Support a configurable default job timeout.
-- [ ] Support an optional per-job timeout override.
-- [ ] Terminate the complete process tree when a timeout expires.
-- [ ] Distinguish timeout, user cancellation, startup failure, and nonzero exit status in execution results.
-- [ ] Add timeout and long-running-command integration tests.
+- [x] Support a configurable default job timeout.
+- [x] Support an optional per-job timeout override.
+- [x] Terminate the complete process tree when a timeout expires.
+- [x] Distinguish timeout, user cancellation, startup failure, and nonzero exit status in execution results.
+- [x] Add timeout and long-running-command integration tests.
 
 ### 3.4 Output handling
 
-- [ ] Stream standard output and standard error while a job is running.
-- [ ] Avoid retaining unlimited child-process output in memory.
-- [ ] Configure maximum captured output per stream.
-- [ ] Mark execution records when output has been truncated.
-- [ ] Preserve concurrent stdout/stderr draining so child processes cannot deadlock on full pipes.
-- [ ] Add high-volume and never-ending output tests.
+- [x] Stream standard output and standard error while a job is running.
+- [x] Avoid retaining unlimited child-process output in memory.
+- [x] Configure maximum captured output per stream.
+- [x] Mark execution records when output has been truncated.
+- [x] Preserve concurrent stdout/stderr draining so child processes cannot deadlock on full pipes.
+- [x] Add high-volume and never-ending output tests.
 
 ### 3.5 Log lifecycle and privacy
 
-- [ ] Add configurable maximum log-file size.
-- [ ] Rotate execution logs without losing complete JSON Lines records.
-- [ ] Add configurable retention by file count, age, or total size.
+- [x] Add configurable maximum log-file size.
+- [x] Rotate execution logs without losing complete JSON Lines records.
+- [x] Add configurable retention by file count.
 - [ ] Recover cleanly from locked, unavailable, or unwritable log directories.
 - [ ] Define how commands, environment values, stdout, and stderr are redacted when they may contain secrets.
-- [ ] Isolate log sinks so one failed sink does not fail all logging.
+- [x] Isolate log sinks so one failed sink does not fail all logging.
 - [ ] Add rotation, retention, permissions, concurrency, and redaction tests.
 
 ### 3.6 Windows process containment

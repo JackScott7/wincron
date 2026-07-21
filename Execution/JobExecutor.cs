@@ -10,17 +10,20 @@ public sealed class JobExecutor : IJobDispatcher
     private readonly IProcessFactory processFactory;
     private readonly IJobExecutionLogger executionLogger;
     private readonly TimeProvider timeProvider;
+    private readonly IJobOutputObserver outputObserver;
 
     public JobExecutor(
         IJobExecutionLogger executionLogger,
         IShellCommandBuilder? commandBuilder = null,
         IProcessFactory? processFactory = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IJobOutputObserver? outputObserver = null)
     {
         this.executionLogger = executionLogger ?? throw new ArgumentNullException(nameof(executionLogger));
         this.commandBuilder = commandBuilder ?? new WindowsShellCommandBuilder();
         this.processFactory = processFactory ?? new SystemProcessFactory();
         this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.outputObserver = outputObserver ?? NullJobOutputObserver.Instance;
     }
 
     public async Task DispatchAsync(
@@ -35,6 +38,9 @@ public sealed class JobExecutor : IJobDispatcher
         var standardOutput = string.Empty;
         var standardError = string.Empty;
         var wasCanceled = false;
+        var timedOut = false;
+        var standardOutputTruncated = false;
+        var standardErrorTruncated = false;
         string? errorMessage = null;
 
         using var process = processFactory.Create(commandBuilder.CreateStartInfo(job));
@@ -46,22 +52,43 @@ public sealed class JobExecutor : IJobDispatcher
                 throw new InvalidOperationException("The command shell did not start.");
             }
 
-            var standardOutputTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
-            var standardErrorTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
+            var standardOutputTask = BoundedProcessOutputReader.ReadAsync(
+                process.StandardOutput,
+                job.ExecutionOptions.MaximumCapturedCharactersPerStream,
+                job.Id,
+                JobOutputChannel.StandardOutput,
+                outputObserver);
+            var standardErrorTask = BoundedProcessOutputReader.ReadAsync(
+                process.StandardError,
+                job.ExecutionOptions.MaximumCapturedCharactersPerStream,
+                job.Id,
+                JobOutputChannel.StandardError,
+                outputObserver);
+
+            using var timeoutSource = new CancellationTokenSource(job.ExecutionOptions.Timeout, timeProvider);
+            using var executionSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                timeoutSource.Token);
 
             try
             {
-                await process.WaitForExitAsync(cancellationToken);
+                await process.WaitForExitAsync(executionSource.Token);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (executionSource.IsCancellationRequested)
             {
-                wasCanceled = true;
+                timedOut = timeoutSource.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+                wasCanceled = cancellationToken.IsCancellationRequested;
                 TerminateProcessTree(process);
-                await process.WaitForExitAsync(CancellationToken.None);
+                await process.WaitForExitAsync(CancellationToken.None)
+                    .WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
             }
 
-            standardOutput = await standardOutputTask;
-            standardError = await standardErrorTask;
+            var capturedStandardOutput = await standardOutputTask;
+            var capturedStandardError = await standardErrorTask;
+            standardOutput = capturedStandardOutput.Text;
+            standardError = capturedStandardError.Text;
+            standardOutputTruncated = capturedStandardOutput.WasTruncated;
+            standardErrorTruncated = capturedStandardError.WasTruncated;
             exitCode = process.ExitCode;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -80,7 +107,10 @@ public sealed class JobExecutor : IJobDispatcher
             standardOutput,
             standardError,
             wasCanceled,
-            errorMessage);
+            errorMessage,
+            timedOut,
+            standardOutputTruncated,
+            standardErrorTruncated);
 
         await executionLogger.WriteAsync(result, CancellationToken.None);
     }

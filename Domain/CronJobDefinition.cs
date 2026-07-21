@@ -9,7 +9,8 @@ public sealed class CronJobDefinition
         string commandText,
         IReadOnlyDictionary<string, string> environmentVariables,
         string workingDirectory,
-        int sourceLineNumber)
+        int sourceLineNumber,
+        JobExecutionOptions? executionOptions = null)
     {
         ArgumentNullException.ThrowIfNull(schedule);
         ArgumentException.ThrowIfNullOrWhiteSpace(commandText);
@@ -28,6 +29,8 @@ public sealed class CronJobDefinition
         WorkingDirectory = workingDirectory;
         SourceLineNumber = sourceLineNumber;
         Id = $"line-{sourceLineNumber}";
+        ExecutionOptions = executionOptions ?? JobExecutionOptions.Default;
+        ExecutionOptions.Validate();
     }
 
     public string Id { get; }
@@ -41,6 +44,8 @@ public sealed class CronJobDefinition
     public string WorkingDirectory { get; }
 
     public int SourceLineNumber { get; }
+
+    public JobExecutionOptions ExecutionOptions { get; }
 
     public override string ToString() => $"{Schedule} {CommandText}";
 }
