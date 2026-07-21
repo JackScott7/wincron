@@ -1,33 +1,43 @@
-﻿using WinCron.lib;
+using WinCron.Configuration;
+using WinCron.Execution;
+using WinCron.Scheduling;
 
-CronParser parser = new();
+using var shutdownSource = new CancellationTokenSource();
 
-if (!parser.Parse())
+Console.CancelKeyPress += (_, eventArgs) =>
 {
-    Console.WriteLine("Invalid cron file. Exiting.");
+    eventArgs.Cancel = true;
+    shutdownSource.Cancel();
+};
+
+var configurationLoader = new CronConfigurationLoader();
+var configurationText = await configurationLoader.LoadAsync(shutdownSource.Token);
+var configurationParser = new CronConfigurationParser();
+var parseResult = configurationParser.Parse(configurationText);
+
+if (!parseResult.IsValid)
+{
+    foreach (var error in parseResult.Errors)
+    {
+        Console.Error.WriteLine(error);
+    }
+
+    Environment.ExitCode = 1;
     return;
 }
 
-Console.WriteLine($"WinCron started at {DateTime.Now:HH:mm:ss}.");
-Console.WriteLine($"Loaded {parser.Crons.Count} crons.");
+Console.WriteLine($"WinCron loaded {parseResult.Configuration.Jobs.Count} job(s) from {configurationLoader.ConfigurationPath}.");
+Console.WriteLine($"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
 
-int lastMinute = -1;
-
-while (true)
-{
-    var now = DateTime.UtcNow;
-
-    if (now.Second == 0 && now.Minute != lastMinute)
+using var executionLogger = new JsonFileJobExecutionLogger();
+var jobExecutor = new JobExecutor(executionLogger);
+var scheduler = new CronScheduler(
+    parseResult.Configuration.Jobs,
+    jobExecutor,
+    new CronSchedulerOptions
     {
-        lastMinute = now.Minute;
+        TimeZone = TimeZoneInfo.Local,
+        MisfireGracePeriod = TimeSpan.FromMinutes(1)
+    });
 
-        var runnableJobs = (from _ in parser.Crons
-                            where _.ShouldRunNow(now)
-                            select _).ToList<CronJob>();
-
-        runnableJobs.ForEach(job => job.Run());
-
-    }
-
-    Thread.Sleep(1000);
-}
+await scheduler.RunAsync(shutdownSource.Token);
