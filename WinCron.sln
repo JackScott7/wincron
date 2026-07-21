@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35506.116 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinCron", "WinCron.csproj", "{F6410651-31B3-44D3-82D3-AD721D866A0F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinCron.Tests", "tests\WinCron.Tests\WinCron.Tests.csproj", "{0BCA3557-FE56-46A4-9C4D-51FD6FD095EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{F6410651-31B3-44D3-82D3-AD721D866A0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6410651-31B3-44D3-82D3-AD721D866A0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6410651-31B3-44D3-82D3-AD721D866A0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0BCA3557-FE56-46A4-9C4D-51FD6FD095EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0BCA3557-FE56-46A4-9C4D-51FD6FD095EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0BCA3557-FE56-46A4-9C4D-51FD6FD095EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0BCA3557-FE56-46A4-9C4D-51FD6FD095EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
