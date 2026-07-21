@@ -2,11 +2,11 @@ using WinCron.Domain;
 
 namespace WinCron.Scheduling;
 
-public sealed class CronOccurrenceCalculator
+public static class CronOccurrenceCalculator
 {
     private static readonly TimeSpan SearchHorizon = TimeSpan.FromDays(366 * 8);
 
-    public DateTimeOffset? GetNextOccurrence(
+    public static DateTimeOffset? GetNextOccurrence(
         CronExpression expression,
         DateTimeOffset after,
         TimeZoneInfo timeZone)

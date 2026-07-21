@@ -66,7 +66,7 @@ public sealed partial class CronConfigurationParser
     private void ParseJobLine(
         string line,
         int lineNumber,
-        IReadOnlyDictionary<string, string> environmentVariables,
+        Dictionary<string, string> environmentVariables,
         List<CronJobDefinition> jobs,
         List<CronParseError> errors)
     {

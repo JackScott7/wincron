@@ -5,40 +5,38 @@ namespace WinCron.Tests.Scheduling;
 
 public sealed class CronOccurrenceCalculatorTests
 {
-    private readonly CronOccurrenceCalculator calculator = new();
-
     [Fact]
-    public void GetNextOccurrence_WithUtcSchedule_ReturnsNextMatchingMinute()
+    public void GetNextOccurrenceReturnsNextMatchingMinuteForUtcSchedule()
     {
         var expression = CreateExpression("*/15", "*", "*", "*", "*");
         var after = new DateTimeOffset(2026, 1, 1, 10, 7, 30, TimeSpan.Zero);
 
-        var occurrence = calculator.GetNextOccurrence(expression, after, TimeZoneInfo.Utc);
+        var occurrence = CronOccurrenceCalculator.GetNextOccurrence(expression, after, TimeZoneInfo.Utc);
 
         Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 15, 0, TimeSpan.Zero), occurrence);
     }
 
     [Fact]
-    public void GetNextOccurrence_DuringSpringForward_SkipsNonexistentLocalTime()
+    public void GetNextOccurrenceSkipsNonexistentLocalTimeDuringSpringForward()
     {
         var easternTime = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
         var expression = CreateExpression("30", "2", "8", "MAR", "*");
         var after = new DateTimeOffset(2026, 3, 8, 5, 0, 0, TimeSpan.Zero);
 
-        var occurrence = calculator.GetNextOccurrence(expression, after, easternTime);
+        var occurrence = CronOccurrenceCalculator.GetNextOccurrence(expression, after, easternTime);
 
         Assert.Equal(new DateTimeOffset(2027, 3, 8, 7, 30, 0, TimeSpan.Zero), occurrence);
     }
 
     [Fact]
-    public void GetNextOccurrence_DuringFallBack_ReturnsBothRepeatedLocalMinutes()
+    public void GetNextOccurrenceReturnsBothRepeatedLocalMinutesDuringFallBack()
     {
         var easternTime = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
         var expression = CreateExpression("30", "1", "1", "NOV", "*");
         var beforeFirstOccurrence = new DateTimeOffset(2026, 11, 1, 5, 29, 0, TimeSpan.Zero);
 
-        var firstOccurrence = calculator.GetNextOccurrence(expression, beforeFirstOccurrence, easternTime);
-        var secondOccurrence = calculator.GetNextOccurrence(expression, firstOccurrence!.Value, easternTime);
+        var firstOccurrence = CronOccurrenceCalculator.GetNextOccurrence(expression, beforeFirstOccurrence, easternTime);
+        var secondOccurrence = CronOccurrenceCalculator.GetNextOccurrence(expression, firstOccurrence!.Value, easternTime);
 
         Assert.Equal(new DateTimeOffset(2026, 11, 1, 5, 30, 0, TimeSpan.Zero), firstOccurrence);
         Assert.Equal(new DateTimeOffset(2026, 11, 1, 6, 30, 0, TimeSpan.Zero), secondOccurrence);

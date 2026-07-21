@@ -6,7 +6,7 @@ namespace WinCron.Tests.Execution;
 public sealed class WindowsShellCommandBuilderTests
 {
     [Fact]
-    public void CreateStartInfo_ConfiguresShellEnvironmentWorkingDirectoryAndExactCommand()
+    public void CreateStartInfoConfiguresShellEnvironmentWorkingDirectoryAndExactCommand()
     {
         const string command = "echo first  second & echo done";
         var job = CreateJob(command, new Dictionary<string, string> { ["WINCRON_VALUE"] = "42" }, @"C:\jobs");

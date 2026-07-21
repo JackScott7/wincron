@@ -5,7 +5,7 @@ namespace WinCron.Tests.Domain;
 public sealed class CronExpressionTests
 {
     [Fact]
-    public void Matches_WhenDayOfMonthAndDayOfWeekAreRestricted_UsesClassicCronOrSemantics()
+    public void MatchesUsesClassicCronOrSemanticsWhenBothDayFieldsAreRestricted()
     {
         var expression = CreateExpression("0", "12", "15", "*", "MON");
 
@@ -15,7 +15,7 @@ public sealed class CronExpressionTests
     }
 
     [Fact]
-    public void Constructor_WithFieldInWrongPosition_ThrowsArgumentException()
+    public void ConstructorThrowsArgumentExceptionWhenFieldIsInWrongPosition()
     {
         var minute = Parse(CronFieldKind.Minute, "*");
         var hour = Parse(CronFieldKind.Hour, "*");
@@ -24,6 +24,15 @@ public sealed class CronExpressionTests
 
         Assert.Throws<ArgumentException>(() =>
             new CronExpression(hour, minute, dayOfMonth, month, Parse(CronFieldKind.DayOfWeek, "*")));
+    }
+
+    [Fact]
+    public void MatchesRequiresRestrictedDayOfWeekWhenDayOfMonthUsesWildcardStep()
+    {
+        var expression = CreateExpression("0", "12", "*/1", "*", "MON");
+
+        Assert.True(expression.Matches(new DateTime(2026, 6, 15, 12, 0, 0)));
+        Assert.False(expression.Matches(new DateTime(2026, 6, 16, 12, 0, 0)));
     }
 
     private static CronExpression CreateExpression(

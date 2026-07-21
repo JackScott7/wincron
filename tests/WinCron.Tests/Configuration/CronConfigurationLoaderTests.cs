@@ -7,7 +7,7 @@ public sealed class CronConfigurationLoaderTests : IDisposable
     private readonly string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"wincron-config-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public async Task LoadAsync_WhenConfigurationIsMissing_CreatesEmptyFile()
+    public async Task LoadAsyncCreatesEmptyFileWhenConfigurationIsMissing()
     {
         var configurationPath = Path.Combine(temporaryDirectory, "nested", "config.wc");
         var loader = new CronConfigurationLoader(configurationPath);
@@ -19,7 +19,7 @@ public sealed class CronConfigurationLoaderTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_WhenConfigurationExists_ReturnsItsContent()
+    public async Task LoadAsyncReturnsContentWhenConfigurationExists()
     {
         Directory.CreateDirectory(temporaryDirectory);
         var configurationPath = Path.Combine(temporaryDirectory, "config.wc");

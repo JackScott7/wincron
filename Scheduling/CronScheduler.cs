@@ -7,7 +7,6 @@ public sealed class CronScheduler
 {
     private readonly IReadOnlyList<CronJobDefinition> jobs;
     private readonly IJobDispatcher jobDispatcher;
-    private readonly CronOccurrenceCalculator occurrenceCalculator;
     private readonly TimeProvider timeProvider;
     private readonly ISchedulerDelay schedulerDelay;
     private readonly CronSchedulerOptions options;
@@ -20,8 +19,7 @@ public sealed class CronScheduler
         IJobDispatcher jobDispatcher,
         CronSchedulerOptions? options = null,
         TimeProvider? timeProvider = null,
-        ISchedulerDelay? schedulerDelay = null,
-        CronOccurrenceCalculator? occurrenceCalculator = null)
+        ISchedulerDelay? schedulerDelay = null)
     {
         ArgumentNullException.ThrowIfNull(jobs);
         ArgumentNullException.ThrowIfNull(jobDispatcher);
@@ -32,7 +30,6 @@ public sealed class CronScheduler
         this.options.Validate();
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.schedulerDelay = schedulerDelay ?? new TimeProviderSchedulerDelay(this.timeProvider);
-        this.occurrenceCalculator = occurrenceCalculator ?? new CronOccurrenceCalculator();
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -116,7 +113,7 @@ public sealed class CronScheduler
         CronJobDefinition job,
         DateTimeOffset afterUtc)
     {
-        var nextOccurrence = occurrenceCalculator.GetNextOccurrence(job.Schedule, afterUtc, options.TimeZone);
+        var nextOccurrence = CronOccurrenceCalculator.GetNextOccurrence(job.Schedule, afterUtc, options.TimeZone);
         if (nextOccurrence is not null)
         {
             queue.Enqueue(new ScheduledJob(job, nextOccurrence.Value), nextOccurrence.Value);

@@ -8,7 +8,7 @@ public sealed class JobExecutorIntegrationTests : IDisposable
     private readonly string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"wincron-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public async Task DispatchAsync_ExecutesThroughCommandShellAndCapturesCompleteResult()
+    public async Task DispatchAsyncExecutesThroughCommandShellAndCapturesCompleteResult()
     {
         Directory.CreateDirectory(temporaryDirectory);
         var logger = new RecordingExecutionLogger();
@@ -32,7 +32,7 @@ public sealed class JobExecutorIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task DispatchAsync_UsesConfiguredWorkingDirectory()
+    public async Task DispatchAsyncUsesConfiguredWorkingDirectory()
     {
         Directory.CreateDirectory(temporaryDirectory);
         var logger = new RecordingExecutionLogger();
@@ -50,7 +50,7 @@ public sealed class JobExecutorIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenShellCannotStart_LogsProcessError()
+    public async Task DispatchAsyncLogsProcessErrorWhenShellCannotStart()
     {
         Directory.CreateDirectory(temporaryDirectory);
         var logger = new RecordingExecutionLogger();

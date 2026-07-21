@@ -13,7 +13,7 @@ public sealed class CronFieldTests
     [InlineData(CronFieldKind.Month, "JAN,MAR-APR", 4, true)]
     [InlineData(CronFieldKind.DayOfWeek, "SUN,MON-FRI", 6, false)]
     [InlineData(CronFieldKind.DayOfWeek, "7", 0, true)]
-    public void TryParse_ValidExpression_MatchesExpectedValue(
+    public void TryParseMatchesExpectedValueForValidExpression(
         CronFieldKind kind,
         string expression,
         int value,
@@ -36,7 +36,7 @@ public sealed class CronFieldTests
     [InlineData(CronFieldKind.Minute, "*/0")]
     [InlineData(CronFieldKind.Minute, "1,,2")]
     [InlineData(CronFieldKind.Minute, "5/2")]
-    public void TryParse_InvalidExpression_ReturnsValidationError(CronFieldKind kind, string expression)
+    public void TryParseReturnsValidationErrorForInvalidExpression(CronFieldKind kind, string expression)
     {
         var parsed = CronField.TryParse(kind, expression, out var field, out var error);
 

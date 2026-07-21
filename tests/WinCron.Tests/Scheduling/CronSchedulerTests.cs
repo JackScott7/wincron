@@ -6,7 +6,7 @@ namespace WinCron.Tests.Scheduling;
 public sealed class CronSchedulerTests
 {
     [Fact]
-    public async Task RunAsync_WhenOccurrenceBecomesDue_DispatchesItOnce()
+    public async Task RunAsyncDispatchesOccurrenceOnceWhenItBecomesDue()
     {
         var cancellationSource = new CancellationTokenSource();
         var timeProvider = new ManualTimeProvider(
@@ -30,7 +30,7 @@ public sealed class CronSchedulerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenClockJumpsPastGracePeriod_SkipsMissedOccurrence()
+    public async Task RunAsyncSkipsMissedOccurrenceWhenClockJumpsPastGracePeriod()
     {
         var cancellationSource = new CancellationTokenSource();
         var timeProvider = new ManualTimeProvider(
@@ -57,12 +57,47 @@ public sealed class CronSchedulerTests
         Assert.Empty(dispatcher.Dispatches);
     }
 
+    [Fact]
+    public async Task RunAsyncDispatchesMultipleJobsAtTheirCalculatedOccurrences()
+    {
+        var cancellationSource = new CancellationTokenSource();
+        var timeProvider = new ManualTimeProvider(
+            new DateTimeOffset(2026, 1, 1, 0, 0, 30, TimeSpan.Zero));
+        var delay = new AdvancingSchedulerDelay(timeProvider);
+        var dispatcher = new RecordingJobDispatcher(cancellationSource, cancelAfterDispatchCount: 3);
+        var everyMinuteJob = CreateJob("*", "*", "*", "*", "*", sourceLineNumber: 1);
+        var secondMinuteJob = CreateJob("2", "*", "*", "*", "*", sourceLineNumber: 2);
+        var scheduler = new CronScheduler(
+            [everyMinuteJob, secondMinuteJob],
+            dispatcher,
+            new CronSchedulerOptions { TimeZone = TimeZoneInfo.Utc },
+            timeProvider,
+            delay);
+
+        await scheduler.RunAsync(cancellationSource.Token);
+
+        Assert.Equal(3, dispatcher.Dispatches.Count);
+        Assert.Contains(
+            dispatcher.Dispatches,
+            dispatch => ReferenceEquals(dispatch.Job, everyMinuteJob)
+                && dispatch.OccurrenceUtc == new DateTimeOffset(2026, 1, 1, 0, 1, 0, TimeSpan.Zero));
+        Assert.Contains(
+            dispatcher.Dispatches,
+            dispatch => ReferenceEquals(dispatch.Job, everyMinuteJob)
+                && dispatch.OccurrenceUtc == new DateTimeOffset(2026, 1, 1, 0, 2, 0, TimeSpan.Zero));
+        Assert.Contains(
+            dispatcher.Dispatches,
+            dispatch => ReferenceEquals(dispatch.Job, secondMinuteJob)
+                && dispatch.OccurrenceUtc == new DateTimeOffset(2026, 1, 1, 0, 2, 0, TimeSpan.Zero));
+    }
+
     private static CronJobDefinition CreateJob(
         string minute,
         string hour,
         string dayOfMonth,
         string month,
-        string dayOfWeek)
+        string dayOfWeek,
+        int sourceLineNumber = 1)
     {
         var expression = new CronExpression(
             Parse(CronFieldKind.Minute, minute),
@@ -71,7 +106,12 @@ public sealed class CronSchedulerTests
             Parse(CronFieldKind.Month, month),
             Parse(CronFieldKind.DayOfWeek, dayOfWeek));
 
-        return new CronJobDefinition(expression, "echo test", new Dictionary<string, string>(), @"C:\", 1);
+        return new CronJobDefinition(
+            expression,
+            "echo test",
+            new Dictionary<string, string>(),
+            @"C:\",
+            sourceLineNumber);
     }
 
     private static CronField Parse(CronFieldKind kind, string expression)
@@ -113,7 +153,9 @@ public sealed class CronSchedulerTests
         }
     }
 
-    private sealed class RecordingJobDispatcher(CancellationTokenSource? cancellationSource = null) : IJobDispatcher
+    private sealed class RecordingJobDispatcher(
+        CancellationTokenSource? cancellationSource = null,
+        int cancelAfterDispatchCount = 1) : IJobDispatcher
     {
         public List<(CronJobDefinition Job, DateTimeOffset OccurrenceUtc)> Dispatches { get; } = [];
 
@@ -123,7 +165,11 @@ public sealed class CronSchedulerTests
             CancellationToken cancellationToken)
         {
             Dispatches.Add((job, scheduledOccurrenceUtc));
-            cancellationSource?.Cancel();
+            if (Dispatches.Count >= cancelAfterDispatchCount)
+            {
+                cancellationSource?.Cancel();
+            }
+
             return Task.CompletedTask;
         }
     }

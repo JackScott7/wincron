@@ -8,7 +8,7 @@ public sealed class JsonFileJobExecutionLoggerTests : IDisposable
     private readonly string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"wincron-log-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public async Task WriteAsync_AppendsOneStructuredJsonRecordPerRun()
+    public async Task WriteAsyncAppendsOneStructuredJsonRecordPerRun()
     {
         using var logger = new JsonFileJobExecutionLogger(temporaryDirectory);
         var startedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);

@@ -85,7 +85,7 @@ public sealed class CronField
             }
         }
 
-        field = new CronField(kind, text, text == "*", values);
+        field = new CronField(kind, text, text.StartsWith('*'), values);
         return true;
     }
 

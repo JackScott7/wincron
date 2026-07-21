@@ -7,7 +7,7 @@ public sealed class CronConfigurationParserTests
     private readonly CronConfigurationParser parser = new(@"C:\default");
 
     [Fact]
-    public void Parse_CommentsBlankLinesNamesRangesAndSteps_CreatesJob()
+    public void ParseCreatesJobFromCommentsBlankLinesNamesRangesAndSteps()
     {
         const string configuration = """
             # weekdays at intervals
@@ -24,7 +24,7 @@ public sealed class CronConfigurationParserTests
     }
 
     [Fact]
-    public void Parse_EnvironmentAssignments_AppliesSnapshotsOnlyToSubsequentJobs()
+    public void ParseAppliesEnvironmentSnapshotsOnlyToSubsequentJobs()
     {
         const string configuration = """
             MODE=first
@@ -53,7 +53,7 @@ public sealed class CronConfigurationParserTests
     }
 
     [Fact]
-    public void Parse_MultipleInvalidLines_ReturnsEveryErrorWithLineNumbers()
+    public void ParseReturnsEveryErrorWithLineNumbersForMultipleInvalidLines()
     {
         const string configuration = """
             * * *
@@ -69,7 +69,7 @@ public sealed class CronConfigurationParserTests
     }
 
     [Fact]
-    public void Parse_CommandContainingEquals_IsNotMistakenForEnvironmentAssignment()
+    public void ParseDoesNotMistakeCommandContainingEqualsForEnvironmentAssignment()
     {
         var result = parser.Parse("* * * * * cmd.exe /c set VALUE=42");
 
