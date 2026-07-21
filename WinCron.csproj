@@ -8,6 +8,9 @@
     <SignAssembly>True</SignAssembly>
     <Title>WinCron</Title>
     <Description>Classic cron-style job scheduling for Windows.</Description>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <PackageProjectUrl>https://wincron.syntaxly.xyz</PackageProjectUrl>
     <RepositoryUrl>https://github.com/JackScott7/wincron</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -25,6 +28,7 @@
 
   <ItemGroup>
     <None Update="README.md" Pack="true" PackagePath="\" />
+    <None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
     <None Update="assets\wincron-icon.png" Pack="true" PackagePath="assets\wincron-icon.png" />
     <None Update="assets\wincron.ico" Pack="true" PackagePath="assets\wincron.ico" />
   </ItemGroup>

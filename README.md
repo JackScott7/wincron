@@ -102,4 +102,4 @@ Scheduling/     Next-occurrence calculation and dispatch loop
 tests/          Unit and integration tests
 ```
 
-The implementation status and completed milestones are recorded in [ROADMAP.md](ROADMAP.md).
+The implementation status and completed milestones are recorded in [ROADMAP.md](ROADMAP.md). Release history is available in [CHANGELOG.md](CHANGELOG.md).
