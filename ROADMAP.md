@@ -168,25 +168,25 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 ### 4.1 Configuration reload
 
-- [ ] Monitor the active configuration file for changes.
-- [ ] Debounce duplicate filesystem notifications.
-- [ ] Parse and validate a complete replacement configuration before activating it.
-- [ ] Keep the last valid configuration running when a reload is invalid or incomplete.
-- [ ] Add stable job identifiers so unchanged jobs retain execution state across reloads.
-- [ ] Reconcile added, removed, and modified jobs atomically.
-- [ ] Define how reload interacts with currently running and queued jobs.
-- [ ] Report successful and rejected reloads with actionable diagnostics.
+- [x] Monitor the active configuration file for changes.
+- [x] Debounce duplicate filesystem notifications.
+- [x] Parse and validate a complete replacement configuration before activating it.
+- [x] Keep the last valid configuration running when a reload is invalid or incomplete.
+- [x] Add stable job identifiers so unchanged jobs retain execution state across reloads.
+- [x] Reconcile added, removed, and modified jobs atomically.
+- [x] Define how reload interacts with currently running and queued jobs.
+- [x] Report successful and rejected reloads with actionable diagnostics.
 - [ ] Add reload tests covering partial writes, rapid saves, renames, deletion, and restoration.
 
 ### 4.2 Windows Service hosting
 
-- [ ] Move long-running scheduling onto the .NET Generic Host/Worker Service lifecycle.
-- [ ] Support foreground interactive mode and Windows Service mode from the same executable.
-- [ ] Integrate start, stop, cancellation, and failure reporting with the Windows Service Control Manager.
+- [x] Move long-running service scheduling onto the .NET Generic Host/Worker Service lifecycle.
+- [x] Support foreground interactive mode and Windows Service mode from the same executable.
+- [x] Integrate start, stop, cancellation, and failure reporting with the Windows Service Control Manager.
 - [ ] Define the service account, configuration location, output location, and file permissions.
 - [ ] Add service recovery configuration for unexpected failures.
 - [ ] Support automatic startup after reboot and operation without an interactive login.
-- [ ] Add Windows Service installation and lifecycle tests.
+- [x] Add Windows Service lifecycle tests.
 
 ### 4.3 Service management
 

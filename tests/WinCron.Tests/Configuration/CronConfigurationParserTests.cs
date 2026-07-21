@@ -129,4 +129,29 @@ public sealed class CronConfigurationParserTests
         Assert.Empty(result.Configuration.Jobs);
         Assert.Equal(2, Assert.Single(result.Errors).LineNumber);
     }
+
+    [Fact]
+    public void ParseUsesStableConfiguredJobIdentifier()
+    {
+        var result = parser.Parse("WINCRON_JOB_ID=nightly.backup\n0 0 * * * echo backup");
+
+        Assert.True(result.IsValid);
+        Assert.Equal("nightly.backup", Assert.Single(result.Configuration.Jobs).Id);
+    }
+
+    [Fact]
+    public void ParseRejectsDuplicateConfiguredJobIdentifiers()
+    {
+        const string configuration = """
+            WINCRON_JOB_ID=duplicate
+            * * * * * echo first
+            * * * * * echo second
+            """;
+
+        var result = parser.Parse(configuration);
+
+        Assert.False(result.IsValid);
+        Assert.Single(result.Configuration.Jobs);
+        Assert.Contains("Duplicate job identifier", Assert.Single(result.Errors).Message);
+    }
 }

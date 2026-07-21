@@ -9,6 +9,7 @@ public sealed partial class CronConfigurationParser
     public const string OverlapPolicyVariableName = "WINCRON_OVERLAP_POLICY";
     public const string TimeoutSecondsVariableName = "WINCRON_TIMEOUT_SECONDS";
     public const string MaximumOutputCharactersVariableName = "WINCRON_MAX_OUTPUT_CHARACTERS";
+    public const string JobIdVariableName = "WINCRON_JOB_ID";
 
     private static readonly CronFieldKind[] FieldKinds =
     [
@@ -39,6 +40,7 @@ public sealed partial class CronConfigurationParser
         var jobs = new List<CronJobDefinition>();
         var errors = new List<CronParseError>();
         var environmentVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var jobIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lines = configurationText.ReplaceLineEndings("\n").Split('\n');
 
         for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
@@ -60,7 +62,7 @@ public sealed partial class CronConfigurationParser
                 continue;
             }
 
-            ParseJobLine(line, lineNumber, environmentVariables, jobs, errors);
+            ParseJobLine(line, lineNumber, environmentVariables, jobIds, jobs, errors);
         }
 
         return new CronConfigurationParseResult(new CronConfiguration(jobs.AsReadOnly()), errors.AsReadOnly());
@@ -70,6 +72,7 @@ public sealed partial class CronConfigurationParser
         string line,
         int lineNumber,
         Dictionary<string, string> environmentVariables,
+        HashSet<string> jobIds,
         List<CronJobDefinition> jobs,
         List<CronParseError> errors)
     {
@@ -128,13 +131,39 @@ public sealed partial class CronConfigurationParser
             return;
         }
 
+        string? jobId = null;
+        if (environmentVariables.TryGetValue(JobIdVariableName, out var configuredJobId))
+        {
+            if (!JobIdRegex().IsMatch(configuredJobId))
+            {
+                errors.Add(new CronParseError(
+                    lineNumber,
+                    $"{JobIdVariableName} must contain 1-64 letters, digits, dots, underscores, or hyphens and start with a letter or digit.",
+                    line));
+                return;
+            }
+
+            jobId = configuredJobId;
+        }
+        else
+        {
+            jobId = $"line-{lineNumber}";
+        }
+
+        if (!jobIds.Add(jobId))
+        {
+            errors.Add(new CronParseError(lineNumber, $"Duplicate job identifier '{jobId}'.", line));
+            return;
+        }
+
         jobs.Add(new CronJobDefinition(
             schedule,
             commandText,
             environmentVariables,
             workingDirectory,
             lineNumber,
-            executionOptions));
+            executionOptions,
+            jobId));
     }
 
     private static bool TryCreateExecutionOptions(
@@ -195,4 +224,7 @@ public sealed partial class CronConfigurationParser
 
     [GeneratedRegex(@"\S+", RegexOptions.CultureInvariant)]
     private static partial Regex NonWhitespaceTokenRegex();
+
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", RegexOptions.CultureInvariant)]
+    private static partial Regex JobIdRegex();
 }

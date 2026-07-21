@@ -6,6 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-21
+
+### Added
+
+- Added atomic live configuration reload with filesystem monitoring and debouncing.
+- Added last-known-good behavior that rejects invalid, missing, partially written, or inaccessible reloads without stopping active scheduling.
+- Added stable, user-defined job identifiers through `WINCRON_JOB_ID` with duplicate validation.
+- Added Windows Service hosting through the .NET Generic Host and the internal `--service` host mode.
+- Added service lifecycle coverage and configuration-watcher/reload integration tests.
+
+### Changed
+
+- Changed scheduler cancellation so configuration reload can stop future scheduling without canceling already running jobs.
+- Changed configuration edits to take effect automatically without restarting WinCron.
+
+### Fixed
+
+- Fixed configuration changes being ignored until the WinCron process was restarted.
+- Fixed invalid replacement configuration being able to displace a known-good scheduling configuration.
+
 ## [1.3.0] - 2026-07-21
 
 ### Added

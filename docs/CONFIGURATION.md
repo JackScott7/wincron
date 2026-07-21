@@ -1,6 +1,8 @@
 # WinCron configuration
 
-WinCron reads `%USERPROFILE%\wincron\config.wc`. If the `wincron` directory or configuration file does not exist, WinCron creates it. Restart WinCron after changing the file.
+WinCron reads `%USERPROFILE%\wincron\config.wc`. If the `wincron` directory or configuration file does not exist, WinCron creates it. Saved changes are validated and reloaded automatically; an invalid or temporarily unavailable replacement leaves the last valid configuration active.
+
+Reload replaces the scheduled-job set atomically. Already running commands are allowed to finish under their original definitions; future occurrences use the replacement configuration. An overlap-controlled execution already tracked by a stable job identifier continues to participate in that identifier's concurrency policy.
 
 For compatibility, when the new configuration is missing and `%USERPROFILE%\config.wc` exists, WinCron copies the legacy file into the `wincron` directory. The original file is preserved.
 
@@ -67,8 +69,11 @@ The following assignments also apply to subsequent jobs:
 | `WINCRON_OVERLAP_POLICY` | `Allow`, `Skip`, `QueueOne`, or `TerminatePrevious` | `Skip` |
 | `WINCRON_TIMEOUT_SECONDS` | Positive number of seconds | `3600` |
 | `WINCRON_MAX_OUTPUT_CHARACTERS` | Positive captured-character limit for each output stream | `1048576` |
+| `WINCRON_JOB_ID` | Unique 1-64 character stable identifier | Source line identifier |
 
 `QueueOne` keeps only the most recently scheduled pending occurrence. `TerminatePrevious` cancels the active execution and starts its replacement after termination completes. These control variables remain available in the child-process environment for backward compatibility with environment assignment behavior.
+
+`WINCRON_JOB_ID` gives a job stable identity across line movement and live reload. Set it before each named job; duplicate or malformed identifiers reject the complete reload.
 
 ## Scheduling semantics
 

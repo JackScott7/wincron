@@ -34,30 +34,37 @@ public sealed class CronScheduler
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        await RunAsync(cancellationToken, cancellationToken);
+    }
+
+    public async Task RunAsync(
+        CancellationToken schedulerCancellationToken,
+        CancellationToken dispatchCancellationToken)
+    {
         var scheduleQueue = CreateInitialSchedule(timeProvider.GetUtcNow());
 
         try
         {
             if (scheduleQueue.Count == 0)
             {
-                await Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, cancellationToken);
+                await Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, schedulerCancellationToken);
                 return;
             }
 
-            while (!cancellationToken.IsCancellationRequested && scheduleQueue.Count > 0)
+            while (!schedulerCancellationToken.IsCancellationRequested && scheduleQueue.Count > 0)
             {
                 scheduleQueue.TryPeek(out _, out var nextOccurrenceUtc);
                 var delay = nextOccurrenceUtc - timeProvider.GetUtcNow();
 
                 if (delay > TimeSpan.Zero)
                 {
-                    await schedulerDelay.DelayAsync(delay, cancellationToken);
+                    await schedulerDelay.DelayAsync(delay, schedulerCancellationToken);
                 }
 
-                DispatchDueJobs(scheduleQueue, timeProvider.GetUtcNow(), cancellationToken);
+                DispatchDueJobs(scheduleQueue, timeProvider.GetUtcNow(), dispatchCancellationToken);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (schedulerCancellationToken.IsCancellationRequested)
         {
             // Normal shutdown.
         }

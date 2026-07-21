@@ -142,16 +142,22 @@ public sealed class WinCronApplication
             fileExecutionLogger);
         var jobExecutor = new JobExecutor(executionLogger, outputObserver: outputObserver);
         var jobDispatcher = new ConcurrencyControlledJobDispatcher(jobExecutor);
-        var scheduler = new CronScheduler(
-            parseResult.Configuration.Jobs,
+        var schedulerOptions = new CronSchedulerOptions
+        {
+            TimeZone = TimeZoneInfo.Local,
+            MisfireGracePeriod = TimeSpan.FromMinutes(1)
+        };
+        using var configurationWatcher = new CronConfigurationWatcher(loader.ConfigurationPath);
+        var scheduler = new ReloadingCronScheduler(
+            loader,
+            new CronConfigurationParser(),
+            configurationWatcher,
             jobDispatcher,
-            new CronSchedulerOptions
-            {
-                TimeZone = TimeZoneInfo.Local,
-                MisfireGracePeriod = TimeSpan.FromMinutes(1)
-            });
+            standardOutput,
+            standardError,
+            schedulerOptions);
 
-        await scheduler.RunAsync(cancellationToken);
+        await scheduler.RunAsync(parseResult.Configuration, cancellationToken);
         return SuccessExitCode;
     }
 

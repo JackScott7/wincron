@@ -8,9 +8,9 @@
     <SignAssembly>True</SignAssembly>
     <Title>WinCron</Title>
     <Description>Classic cron-style job scheduling for Windows.</Description>
-    <Version>1.3.0</Version>
-    <AssemblyVersion>1.3.0.0</AssemblyVersion>
-    <FileVersion>1.3.0.0</FileVersion>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <PackageProjectUrl>https://wincron.syntaxly.xyz</PackageProjectUrl>
     <RepositoryUrl>https://github.com/JackScott7/wincron</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -19,6 +19,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RootNamespace>WinCron</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />

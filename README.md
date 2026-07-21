@@ -26,6 +26,9 @@ WinCron reads a familiar five-field crontab, calculates future occurrences witho
 - Per-job overlap policies, execution timeouts, and bounded captured output.
 - Live job output with rotating structured JSON logs.
 - Single-instance protection for each configuration file.
+- Automatic, atomic configuration reload with last-known-good fallback.
+- Foreground and native Windows Service hosting modes.
+- Stable user-defined job identifiers.
 - Unit and integration test coverage.
 - Validation rejects schedules that can never produce a calendar occurrence.
 - Empty configurations keep the scheduler idle and ready instead of terminating unexpectedly.
@@ -60,6 +63,8 @@ dotnet run --project WinCron.csproj
 ```
 
 Press `Ctrl+C` for graceful shutdown.
+
+Changes saved to the active `config.wc` are validated and reloaded automatically. If a replacement file is invalid or temporarily unavailable, WinCron reports the error and continues using the last valid configuration.
 
 ## Command line
 
@@ -116,6 +121,15 @@ WINCRON_MAX_OUTPUT_CHARACTERS=1048576
 */5 * * * * powershell.exe -NoProfile -File C:\jobs\report.ps1
 ```
 
+Use a stable identifier before a job when its identity must survive line movement during configuration reload:
+
+```text
+WINCRON_JOB_ID=nightly-backup
+0 2 * * * powershell.exe -NoProfile -File C:\jobs\backup.ps1
+```
+
+Identifiers contain 1-64 letters, digits, dots, underscores, or hyphens, must start with a letter or digit, and must be unique.
+
 See [WinCron configuration](docs/CONFIGURATION.md) for the complete grammar, matching rules, environment behavior, working-directory convention, DST policy, and logging details.
 
 ## Logs
@@ -147,3 +161,15 @@ tests/          Unit and integration tests
 ```
 
 The implementation status and completed milestones are recorded in [ROADMAP.md](ROADMAP.md). Release history is available in [CHANGELOG.md](CHANGELOG.md).
+
+## Windows Service hosting
+
+`--service` is an internal host switch intended for the Windows Service Control Manager. A service installation should always provide a machine-level configuration path:
+
+```powershell
+sc.exe create WinCron start= auto binPath= '"C:\Program Files\WinCron\wincron.exe" --service --config "C:\ProgramData\WinCron\config.wc"'
+sc.exe failure WinCron reset= 86400 actions= restart/5000/restart/15000/restart/60000
+sc.exe start WinCron
+```
+
+The release installer automates this setup. Foreground use remains non-administrative and backward compatible.

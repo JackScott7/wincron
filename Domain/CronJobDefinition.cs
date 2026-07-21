@@ -10,7 +10,8 @@ public sealed class CronJobDefinition
         IReadOnlyDictionary<string, string> environmentVariables,
         string workingDirectory,
         int sourceLineNumber,
-        JobExecutionOptions? executionOptions = null)
+        JobExecutionOptions? executionOptions = null,
+        string? id = null)
     {
         ArgumentNullException.ThrowIfNull(schedule);
         ArgumentException.ThrowIfNullOrWhiteSpace(commandText);
@@ -28,7 +29,7 @@ public sealed class CronJobDefinition
             new Dictionary<string, string>(environmentVariables, StringComparer.OrdinalIgnoreCase));
         WorkingDirectory = workingDirectory;
         SourceLineNumber = sourceLineNumber;
-        Id = $"line-{sourceLineNumber}";
+        Id = string.IsNullOrWhiteSpace(id) ? $"line-{sourceLineNumber}" : id;
         ExecutionOptions = executionOptions ?? JobExecutionOptions.Default;
         ExecutionOptions.Validate();
     }
