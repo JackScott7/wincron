@@ -76,7 +76,7 @@ See [WinCron configuration](docs/CONFIGURATION.md) for the complete grammar, mat
 
 ## Logs
 
-Each execution is appended as a JSON object to:
+When a job finishes, WinCron prints its command, exit status, duration, standard output, and standard error in the terminal. The same execution is appended as a JSON object to:
 
 ```text
 %USERPROFILE%\wincron\output\runs.jsonl

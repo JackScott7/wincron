@@ -29,7 +29,9 @@ if (!parseResult.IsValid)
 Console.WriteLine($"WinCron loaded {parseResult.Configuration.Jobs.Count} job(s) from {configurationLoader.ConfigurationPath}.");
 Console.WriteLine($"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
 
-using var executionLogger = new JsonFileJobExecutionLogger();
+using var fileExecutionLogger = new JsonFileJobExecutionLogger();
+using var consoleExecutionLogger = new ConsoleJobExecutionLogger();
+var executionLogger = new CompositeJobExecutionLogger(consoleExecutionLogger, fileExecutionLogger);
 var jobExecutor = new JobExecutor(executionLogger);
 var scheduler = new CronScheduler(
     parseResult.Configuration.Jobs,

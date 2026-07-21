@@ -78,7 +78,7 @@ Every execution records:
 - Standard output and standard error.
 - Cancellation state or process-start error.
 
-Records are appended as one JSON object per line to `%USERPROFILE%\wincron\output\runs.jsonl`. Press `Ctrl+C` to stop WinCron; active child process trees are terminated so they are not orphaned.
+Completed jobs print their status, duration, standard output, and standard error in the WinCron terminal. Records are also appended as one JSON object per line to `%USERPROFILE%\wincron\output\runs.jsonl`. Press `Ctrl+C` to stop WinCron; active child process trees are terminated so they are not orphaned.
 
 ## Build and test
 
