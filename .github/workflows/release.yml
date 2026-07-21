@@ -32,8 +32,12 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           [xml]$project = Get-Content WinCron.csproj
           $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw 'WinCron.csproj does not define a Version.'
+          }
           if ('${{ github.ref_type }}' -eq 'tag' -and '${{ github.ref_name }}' -ne "v$version") {
             throw "Tag ${{ github.ref_name }} does not match project version v$version."
           }
@@ -42,59 +46,39 @@ jobs:
       - name: Publish WinCron
         run: dotnet publish WinCron.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore --output artifacts/publish/win-x64
 
-      - name: Import release signing certificate
+      - name: Prepare release signing certificate
         if: github.ref_type == 'tag'
         id: signing
         shell: pwsh
-        timeout-minutes: 3
+        timeout-minutes: 1
         env:
           SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
         run: |
+          $ErrorActionPreference = 'Stop'
+
           if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_BASE64)) {
             throw 'WINDOWS_SIGNING_CERTIFICATE_BASE64 is required for tagged releases.'
           }
-
           if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_PASSWORD)) {
             throw 'WINDOWS_SIGNING_CERTIFICATE_PASSWORD is required for tagged releases.'
           }
 
           $certificatePath = Join-Path $env:RUNNER_TEMP 'wincron-signing.pfx'
-          [IO.File]::WriteAllBytes(
-            $certificatePath,
-            [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64)
-          )
-
-          $securePassword = ConvertTo-SecureString `
-            $env:SIGNING_CERTIFICATE_PASSWORD `
-            -AsPlainText `
-            -Force
-
-          $certificate = Import-PfxCertificate `
-            -FilePath $certificatePath `
-            -CertStoreLocation 'Cert:\CurrentUser\My' `
-            -Password $securePassword |
-            Where-Object HasPrivateKey |
-            Select-Object -First 1
-
-          if (!$certificate) {
-            throw 'The PFX does not contain a private key.'
+          try {
+            $certificateBytes = [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64)
+          }
+          catch {
+            throw 'WINDOWS_SIGNING_CERTIFICATE_BASE64 is not valid Base64.'
           }
 
-          if ($certificate.Subject -eq $certificate.Issuer) {
-            $publicCertificatePath = Join-Path $env:RUNNER_TEMP 'wincron-signing.cer'
+          if ($certificateBytes.Length -eq 0) {
+            throw 'The decoded signing certificate is empty.'
+          }
 
-            Export-Certificate `
-              -Cert $certificate `
-              -FilePath $publicCertificatePath |
-              Out-Null
-
-            Import-Certificate `
-              -FilePath $publicCertificatePath `
-              -CertStoreLocation 'Cert:\CurrentUser\Root' |
-              Out-Null
-
-            Write-Warning 'Using a self-signed certificate trusted only on this workflow runner.'
+          [IO.File]::WriteAllBytes($certificatePath, $certificateBytes)
+          if (!(Test-Path -LiteralPath $certificatePath -PathType Leaf)) {
+            throw 'Failed to create the temporary signing certificate.'
           }
 
           "certificate_path=$certificatePath" >> $env:GITHUB_OUTPUT
@@ -104,21 +88,49 @@ jobs:
         id: signtool
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $signTool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' -Filter signtool.exe -Recurse |
             Where-Object FullName -Match '\\x64\\signtool\.exe$' |
             Sort-Object FullName -Descending |
             Select-Object -First 1 -ExpandProperty FullName
-          if (!$signTool) { throw 'signtool.exe was not found.' }
+          if (!$signTool) {
+            throw 'signtool.exe was not found.'
+          }
           "path=$signTool" >> $env:GITHUB_OUTPUT
 
       - name: Sign WinCron executable
         if: github.ref_type == 'tag'
         shell: pwsh
+        timeout-minutes: 5
         env:
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          & '${{ steps.signtool.outputs.path }}' sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f '${{ steps.signing.outputs.certificate_path }}' /p $env:SIGNING_CERTIFICATE_PASSWORD artifacts\publish\win-x64\wincron.exe
-          & '${{ steps.signtool.outputs.path }}' verify /pa artifacts\publish\win-x64\wincron.exe
+          $ErrorActionPreference = 'Stop'
+          $executable = 'artifacts\publish\win-x64\wincron.exe'
+
+          if (!(Test-Path -LiteralPath $executable -PathType Leaf)) {
+            throw "Executable not found: $executable"
+          }
+
+          & '${{ steps.signtool.outputs.path }}' sign `
+            /fd SHA256 `
+            /td SHA256 `
+            /tr https://timestamp.digicert.com `
+            /f '${{ steps.signing.outputs.certificate_path }}' `
+            /p $env:SIGNING_CERTIFICATE_PASSWORD `
+            $executable
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "SignTool failed to sign WinCron (exit code $LASTEXITCODE)."
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $executable
+          if (!$signature.SignerCertificate) {
+            throw 'The WinCron executable does not contain an Authenticode signature.'
+          }
+
+          Write-Host "Signed executable with certificate: $($signature.SignerCertificate.Subject)"
+          Write-Host "Local trust status: $($signature.Status)"
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress --yes
@@ -126,23 +138,58 @@ jobs:
       - name: Build single installer
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=${{ steps.version.outputs.version }}" installer\wincron.iss
-          if (!(Test-Path artifacts\installer\wincron-setup.exe)) {
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+          }
+          if (!(Test-Path -LiteralPath artifacts\installer\wincron-setup.exe -PathType Leaf)) {
             throw 'Inno Setup did not produce wincron-setup.exe.'
           }
 
       - name: Sign installer
         if: github.ref_type == 'tag'
         shell: pwsh
+        timeout-minutes: 5
         env:
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          & '${{ steps.signtool.outputs.path }}' sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f '${{ steps.signing.outputs.certificate_path }}' /p $env:SIGNING_CERTIFICATE_PASSWORD artifacts\installer\wincron-setup.exe
-          & '${{ steps.signtool.outputs.path }}' verify /pa artifacts\installer\wincron-setup.exe
+          $ErrorActionPreference = 'Stop'
+          $installer = 'artifacts\installer\wincron-setup.exe'
+
+          & '${{ steps.signtool.outputs.path }}' sign `
+            /fd SHA256 `
+            /td SHA256 `
+            /tr https://timestamp.digicert.com `
+            /f '${{ steps.signing.outputs.certificate_path }}' `
+            /p $env:SIGNING_CERTIFICATE_PASSWORD `
+            $installer
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "SignTool failed to sign the installer (exit code $LASTEXITCODE)."
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          if (!$signature.SignerCertificate) {
+            throw 'The WinCron installer does not contain an Authenticode signature.'
+          }
+
+          Write-Host "Signed installer with certificate: $($signature.SignerCertificate.Subject)"
+          Write-Host "Local trust status: $($signature.Status)"
+
+      - name: Remove temporary signing certificate
+        if: always() && github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $certificatePath = '${{ steps.signing.outputs.certificate_path }}'
+          if (![string]::IsNullOrWhiteSpace($certificatePath) -and (Test-Path -LiteralPath $certificatePath)) {
+            Remove-Item -LiteralPath $certificatePath -Force
+          }
 
       - name: Create SHA-256 checksum
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $hash = (Get-FileHash artifacts\installer\wincron-setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  wincron-setup.exe" | Set-Content artifacts\installer\wincron-setup.exe.sha256
 
