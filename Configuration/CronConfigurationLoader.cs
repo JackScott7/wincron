@@ -2,11 +2,21 @@ namespace WinCron.Configuration;
 
 public sealed class CronConfigurationLoader
 {
-    public CronConfigurationLoader(string? configurationPath = null)
+    private readonly string? legacyConfigurationPath;
+
+    public CronConfigurationLoader(
+        string? configurationPath = null,
+        string? legacyConfigurationPath = null)
     {
+        var userProfileDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
         ConfigurationPath = configurationPath ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            userProfileDirectory,
+            "wincron",
             "config.wc");
+
+        this.legacyConfigurationPath = legacyConfigurationPath
+            ?? (configurationPath is null ? Path.Combine(userProfileDirectory, "config.wc") : null);
     }
 
     public string ConfigurationPath { get; }
@@ -21,7 +31,14 @@ public sealed class CronConfigurationLoader
 
         if (!File.Exists(ConfigurationPath))
         {
-            await File.WriteAllTextAsync(ConfigurationPath, string.Empty, cancellationToken);
+            if (legacyConfigurationPath is not null && File.Exists(legacyConfigurationPath))
+            {
+                File.Copy(legacyConfigurationPath, ConfigurationPath);
+            }
+            else
+            {
+                await File.WriteAllTextAsync(ConfigurationPath, string.Empty, cancellationToken);
+            }
         }
 
         return await File.ReadAllTextAsync(ConfigurationPath, cancellationToken);

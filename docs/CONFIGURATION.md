@@ -1,6 +1,8 @@
 # WinCron configuration
 
-WinCron reads `%USERPROFILE%\config.wc`. If the file does not exist, WinCron creates it. Restart WinCron after changing the file.
+WinCron reads `%USERPROFILE%\wincron\config.wc`. If the `wincron` directory or configuration file does not exist, WinCron creates it. Restart WinCron after changing the file.
+
+For compatibility, when the new configuration is missing and `%USERPROFILE%\config.wc` exists, WinCron copies the legacy file into the `wincron` directory. The original file is preserved.
 
 Each job has five schedule fields followed by the command. The command is retained exactly from its first non-whitespace character onward.
 

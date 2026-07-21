@@ -38,7 +38,7 @@ Build the project:
 dotnet build WinCron.sln --configuration Release
 ```
 
-Create `%USERPROFILE%\config.wc`:
+Create `%USERPROFILE%\wincron\config.wc`:
 
 ```text
 # Every five minutes

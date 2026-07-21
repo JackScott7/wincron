@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Changed the default configuration location from `%USERPROFILE%\config.wc` to `%USERPROFILE%\wincron\config.wc`; existing legacy configuration is copied to the new location when needed.
+
 ### Fixed
 
 - Fixed captured job output being written only to the JSON log by also displaying each completed job's status, standard output, and standard error in the WinCron terminal.
