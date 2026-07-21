@@ -13,6 +13,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -45,6 +46,7 @@ jobs:
         if: github.ref_type == 'tag'
         id: signing
         shell: pwsh
+        timeout-minutes: 3
         env:
           SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
@@ -87,10 +89,10 @@ jobs:
               -FilePath $publicCertificatePath |
               Out-Null
 
-            & certutil.exe -user -addstore -f Root $publicCertificatePath
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to trust the self-signed certificate (certutil exit code $LASTEXITCODE)."
-            }
+            Import-Certificate `
+              -FilePath $publicCertificatePath `
+              -CertStoreLocation 'Cert:\CurrentUser\Root' |
+              Out-Null
 
             Write-Warning 'Using a self-signed certificate trusted only on this workflow runner.'
           }
