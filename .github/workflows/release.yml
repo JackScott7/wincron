@@ -47,12 +47,54 @@ jobs:
         shell: pwsh
         env:
           SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_BASE64)) {
             throw 'WINDOWS_SIGNING_CERTIFICATE_BASE64 is required for tagged releases.'
           }
+
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_PASSWORD)) {
+            throw 'WINDOWS_SIGNING_CERTIFICATE_PASSWORD is required for tagged releases.'
+          }
+
           $certificatePath = Join-Path $env:RUNNER_TEMP 'wincron-signing.pfx'
-          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64))
+          [IO.File]::WriteAllBytes(
+            $certificatePath,
+            [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64)
+          )
+
+          $securePassword = ConvertTo-SecureString `
+            $env:SIGNING_CERTIFICATE_PASSWORD `
+            -AsPlainText `
+            -Force
+
+          $certificate = Import-PfxCertificate `
+            -FilePath $certificatePath `
+            -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -Password $securePassword |
+            Where-Object HasPrivateKey |
+            Select-Object -First 1
+
+          if (!$certificate) {
+            throw 'The PFX does not contain a private key.'
+          }
+
+          if ($certificate.Subject -eq $certificate.Issuer) {
+            $publicCertificatePath = Join-Path $env:RUNNER_TEMP 'wincron-signing.cer'
+
+            Export-Certificate `
+              -Cert $certificate `
+              -FilePath $publicCertificatePath |
+              Out-Null
+
+            Import-Certificate `
+              -FilePath $publicCertificatePath `
+              -CertStoreLocation 'Cert:\CurrentUser\Root' |
+              Out-Null
+
+            Write-Warning 'Using a self-signed certificate trusted only on this workflow runner.'
+          }
+
           "certificate_path=$certificatePath" >> $env:GITHUB_OUTPUT
 
       - name: Locate SignTool
