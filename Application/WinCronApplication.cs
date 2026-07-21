@@ -129,7 +129,11 @@ public sealed class WinCronApplication
         await standardOutput.WriteLineAsync(
             $"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
 
-        using var fileExecutionLogger = new JsonFileJobExecutionLogger();
+        var configurationDirectory = Path.GetDirectoryName(loader.ConfigurationPath);
+        var logDirectory = string.IsNullOrWhiteSpace(configurationDirectory)
+            ? null
+            : Path.Combine(configurationDirectory, "output");
+        using var fileExecutionLogger = new JsonFileJobExecutionLogger(logDirectory);
         using var consoleExecutionLogger = new ConsoleJobExecutionLogger(
             standardOutput,
             standardError,

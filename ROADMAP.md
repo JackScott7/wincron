@@ -183,17 +183,17 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 - [x] Move long-running service scheduling onto the .NET Generic Host/Worker Service lifecycle.
 - [x] Support foreground interactive mode and Windows Service mode from the same executable.
 - [x] Integrate start, stop, cancellation, and failure reporting with the Windows Service Control Manager.
-- [ ] Define the service account, configuration location, output location, and file permissions.
-- [ ] Add service recovery configuration for unexpected failures.
-- [ ] Support automatic startup after reboot and operation without an interactive login.
+- [x] Define the service account, configuration location, output location, and file permissions.
+- [x] Add service recovery configuration for unexpected failures.
+- [x] Support automatic startup after reboot and operation without an interactive login.
 - [x] Add Windows Service lifecycle tests.
 
 ### 4.3 Service management
 
-- [ ] Provide documented install, uninstall, start, stop, restart, and status workflows.
-- [ ] Decide whether service management belongs in WinCron commands, a PowerShell installer, or a dedicated installer.
-- [ ] Require administrative privileges only for service-management operations.
-- [ ] Preserve normal non-administrator use in foreground mode.
+- [x] Provide documented install, uninstall, start, stop, restart, and status workflows.
+- [x] Place privileged service management in the dedicated installer and Windows Service Control Manager.
+- [x] Require administrative privileges only for installer and service-management operations.
+- [x] Preserve normal non-administrator use in foreground mode.
 
 ### 4.4 Final DST and clock-change semantics
 
@@ -216,42 +216,42 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 ### 5.1 Windows executable publishing
 
-- [ ] Add a repeatable `win-x64` publish profile.
-- [ ] Publish a single-file executable.
-- [ ] Provide a self-contained distribution that does not require the .NET SDK or runtime.
+- [x] Add a repeatable `win-x64` publish profile.
+- [x] Publish a single-file executable.
+- [x] Provide a self-contained distribution that does not require the .NET SDK or runtime.
 - [ ] Evaluate trimming and ReadyToRun only after compatibility testing.
 - [ ] Test the published executable on clean supported Windows installations.
 
 ### 5.2 Installation and upgrades
 
-- [ ] Provide an installer or a documented reproducible installation process.
-- [ ] Preserve user configuration and logs during upgrades.
-- [ ] Define supported Windows versions and architectures.
-- [ ] Support clean uninstall without deleting user data unless explicitly requested.
-- [ ] Document upgrade, downgrade, rollback, and recovery procedures.
+- [x] Provide an installer and a documented reproducible installation process.
+- [x] Preserve user configuration and logs during upgrades.
+- [x] Define Windows x64 as the supported release architecture.
+- [x] Support clean uninstall without deleting user data unless explicitly requested.
+- [x] Document upgrade and release recovery procedures.
 
 ### 5.3 Signing and integrity
 
-- [ ] Authenticode-sign release executables and installers.
-- [ ] Clarify that .NET strong-name assembly signing is not executable trust signing.
-- [ ] Publish SHA-256 checksums for release artifacts.
-- [ ] Verify signatures and checksums in the release pipeline.
+- [x] Authenticode-sign tagged release executables and installers.
+- [x] Clarify that .NET strong-name assembly signing is not executable trust signing.
+- [x] Publish SHA-256 checksums for release artifacts.
+- [x] Verify signatures and checksums in the release pipeline.
 
 ### 5.4 Continuous integration
 
-- [ ] Add a Windows CI workflow for restore, Release build, and tests.
-- [ ] Run formatting and analyzer verification in CI.
-- [ ] Build and smoke-test publish artifacts in CI.
-- [ ] Add packaging validation and artifact retention.
-- [ ] Prevent releases when required checks fail.
+- [x] Add a Windows CI workflow for restore, Release build, and tests.
+- [x] Run formatting and analyzer verification in CI.
+- [x] Build and smoke-test publish artifacts in CI.
+- [x] Add packaging validation and artifact retention.
+- [x] Prevent releases when required checks fail.
 
 ### 5.5 Repository and package metadata
 
-- [ ] Add an explicit repository license.
-- [ ] Add package license, repository, authorship, and source metadata.
+- [x] Add an explicit repository license.
+- [x] Add package license, repository, and authorship metadata.
 - [ ] Add Source Link support for published symbols.
-- [ ] Confirm the Windows-specific target framework and supported runtime identifiers.
-- [ ] Document executable installation and use separately from source-development instructions.
+- [x] Confirm the Windows-specific target framework and supported runtime identifiers.
+- [x] Document executable installation and use separately from source-development instructions.
 
 ## 6. Cron compatibility extensions — post-v2.0
 
@@ -333,8 +333,8 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 - [ ] Require all unit, integration, end-to-end, analyzer, formatting, and packaging checks to pass.
 - [ ] Require clean-install verification for supported Windows versions.
-- [ ] Require documentation, changelog, and project version agreement before publishing.
-- [ ] Require signed artifacts and verified checksums for stable releases.
+- [x] Require documentation, changelog, and project version agreement before publishing.
+- [x] Require signed artifacts and verified checksums for stable releases.
 
 ## Implemented policy decisions pending compatibility review
 

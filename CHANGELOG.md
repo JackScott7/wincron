@@ -6,6 +6,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-21
+
+### Added
+
+- Added a self-contained, single-file `win-x64` publish profile.
+- Added a single `wincron-setup.exe` installer that preserves configuration, installs WinCron on `PATH`, configures automatic Windows Service startup and recovery, and starts the daemon.
+- Added Windows CI for formatting, Release builds, all tests, publish verification, and executable smoke testing.
+- Added a tag-driven workflow that builds and signs the executable and installer, publishes a SHA-256 checksum and GitHub Release assets, and records a linked GitHub Deployment.
+- Added an MIT license and complete package/repository metadata.
+
+### Changed
+
+- Changed the target framework to the explicit Windows target and made release publishing self-contained.
+- Changed structured log placement to the selected configuration directory so the service uses `C:\ProgramData\WinCron\output`.
+
+### Fixed
+
+- Fixed service logs defaulting to the LocalSystem profile instead of the service configuration directory.
+
 ## [2.0.0] - 2026-07-21
 
 ### Added

@@ -1,0 +1,146 @@
+name: Build installer and publish release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore and test
+        run: |
+          dotnet restore WinCron.sln
+          dotnet test WinCron.sln --configuration Release --no-restore
+
+      - name: Read project version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content WinCron.csproj
+          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          if ('${{ github.ref_type }}' -eq 'tag' -and '${{ github.ref_name }}' -ne "v$version") {
+            throw "Tag ${{ github.ref_name }} does not match project version v$version."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish WinCron
+        run: dotnet publish WinCron.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore --output artifacts/publish/win-x64
+
+      - name: Import release signing certificate
+        if: github.ref_type == 'tag'
+        id: signing
+        shell: pwsh
+        env:
+          SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_BASE64)) {
+            throw 'WINDOWS_SIGNING_CERTIFICATE_BASE64 is required for tagged releases.'
+          }
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'wincron-signing.pfx'
+          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64))
+          "certificate_path=$certificatePath" >> $env:GITHUB_OUTPUT
+
+      - name: Locate SignTool
+        if: github.ref_type == 'tag'
+        id: signtool
+        shell: pwsh
+        run: |
+          $signTool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' -Filter signtool.exe -Recurse |
+            Where-Object FullName -Match '\\x64\\signtool\.exe$' |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (!$signTool) { throw 'signtool.exe was not found.' }
+          "path=$signTool" >> $env:GITHUB_OUTPUT
+
+      - name: Sign WinCron executable
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          & '${{ steps.signtool.outputs.path }}' sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f '${{ steps.signing.outputs.certificate_path }}' /p $env:SIGNING_CERTIFICATE_PASSWORD artifacts\publish\win-x64\wincron.exe
+          & '${{ steps.signtool.outputs.path }}' verify /pa artifacts\publish\win-x64\wincron.exe
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress --yes
+
+      - name: Build single installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=${{ steps.version.outputs.version }}" installer\wincron.iss
+          if (!(Test-Path artifacts\installer\wincron-setup.exe)) {
+            throw 'Inno Setup did not produce wincron-setup.exe.'
+          }
+
+      - name: Sign installer
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          & '${{ steps.signtool.outputs.path }}' sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f '${{ steps.signing.outputs.certificate_path }}' /p $env:SIGNING_CERTIFICATE_PASSWORD artifacts\installer\wincron-setup.exe
+          & '${{ steps.signtool.outputs.path }}' verify /pa artifacts\installer\wincron-setup.exe
+
+      - name: Create SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash artifacts\installer\wincron-setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  wincron-setup.exe" | Set-Content artifacts\installer\wincron-setup.exe.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wincron-setup
+          path: |
+            artifacts/installer/wincron-setup.exe
+            artifacts/installer/wincron-setup.exe.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release assets
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/installer/wincron-setup.exe
+            artifacts/installer/wincron-setup.exe.sha256
+
+      - name: Record successful GitHub Deployment
+        if: github.ref_type == 'tag'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'wincron-release',
+              auto_merge: false,
+              required_contexts: [],
+              description: `WinCron installer ${{ steps.version.outputs.version }}`
+            });
+            if (deployment.data.id) {
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.data.id,
+                state: 'success',
+                environment_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${context.ref.replace('refs/tags/', '')}`,
+                description: 'Installer published to GitHub Releases'
+              });
+            }

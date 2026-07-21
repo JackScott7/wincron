@@ -1,0 +1,5 @@
+# WinCron service configuration
+# This file is loaded from C:\ProgramData\WinCron\config.wc.
+
+# Every five minutes
+# */5 * * * * echo WinCron service is running

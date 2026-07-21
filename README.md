@@ -36,7 +36,20 @@ WinCron reads a familiar five-field crontab, calculates future occurrences witho
 ## Requirements
 
 - Windows x64.
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) to build from source.
+- The release installer includes the .NET runtime; no SDK or separate runtime is required.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) is required only to build from source.
+
+## Install
+
+Download `wincron-setup.exe` from the matching GitHub Release and run it as an administrator. The installer:
+
+- Installs the self-contained executable under `C:\Program Files\WinCron` and adds it to the machine `PATH`.
+- Creates `C:\ProgramData\WinCron\config.wc` only when it does not already exist.
+- Preserves configuration and logs during upgrades and uninstall.
+- Installs the automatic `WinCron` Windows Service with restart-on-failure recovery.
+- Starts WinCron at boot without requiring an interactive login.
+
+The service runs as LocalSystem, so every configured command runs with machine-level privileges. Only administrators should be allowed to modify `C:\ProgramData\WinCron\config.wc`. Use foreground mode under a normal user account when elevated execution is not required.
 
 ## Quick start
 
@@ -140,7 +153,7 @@ Standard output and standard error are forwarded to the terminal while a job run
 %USERPROFILE%\wincron\output\runs.jsonl
 ```
 
-Records include the scheduled occurrence, start and completion times, duration, command, exit code, bounded standard output and error, truncation flags, cancellation and timeout state, and process-start errors. `runs.jsonl` rotates at 10 MiB and retains five rotated files by default.
+Records include the scheduled occurrence, start and completion times, duration, command, exit code, bounded standard output and error, truncation flags, cancellation and timeout state, and process-start errors. `runs.jsonl` rotates at 10 MiB and retains five rotated files by default. Logs are stored in an `output` directory beside the selected configuration file.
 
 ## Testing
 
@@ -156,11 +169,16 @@ The suite covers parsing, validation, object initialization, environment scoping
 Configuration/  Configuration loading and crontab parsing
 Domain/         Immutable cron fields, expressions, and job definitions
 Execution/      Command-shell execution and structured logging
+Hosting/        Windows Service and Generic Host integration
 Scheduling/     Next-occurrence calculation and dispatch loop
+installer/      Inno Setup definition and initial service configuration
+.github/        Windows CI and signed release workflows
 tests/          Unit and integration tests
 ```
 
 The implementation status and completed milestones are recorded in [ROADMAP.md](ROADMAP.md). Release history is available in [CHANGELOG.md](CHANGELOG.md).
+
+Release maintainers should also read [Releasing WinCron](docs/RELEASING.md) for signing secrets, tag/version requirements, installer generation, and deployment recording.
 
 ## Windows Service hosting
 
@@ -172,4 +190,8 @@ sc.exe failure WinCron reset= 86400 actions= restart/5000/restart/15000/restart/
 sc.exe start WinCron
 ```
 
-The release installer automates this setup. Foreground use remains non-administrative and backward compatible.
+The release installer automates this setup, service recovery, upgrades, and removal. Foreground use remains non-administrative and backward compatible.
+
+## Release signing
+
+Tagged release workflows require the `WINDOWS_SIGNING_CERTIFICATE_BASE64` and `WINDOWS_SIGNING_CERTIFICATE_PASSWORD` repository secrets. The workflow Authenticode-signs both `wincron.exe` and `wincron-setup.exe`, verifies the signatures, and publishes a SHA-256 checksum. Manual workflow runs can build unsigned test artifacts but do not publish a release.
