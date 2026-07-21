@@ -5,61 +5,38 @@
 <h1 align="center">WinCron</h1>
 
 <p align="center">
-  Classic cron-style job scheduling for Windows, built with modern C# and .NET 10.
+  <strong>Run cron-style jobs on Windows without rebuilding every schedule in Task Scheduler.</strong>
 </p>
 
-WinCron reads a familiar five-field crontab, calculates future occurrences without per-second polling, and executes commands through the Windows command shell. It supports cron ranges, lists, steps, named months and weekdays, scoped environment variables, working directories, DST-aware scheduling, and structured execution logs.
+WinCron brings familiar five-field cron scheduling to Windows. Keep your existing scripts and cron-style timing, execute them through the Windows command shell, and run them continuously as a native Windows Service.
 
-## Features
+One text file defines the schedule. WinCron validates it, reloads changes automatically, executes each command, and records what happened.
 
-- Classic five-field cron expressions.
-- Lists, ranges, wildcard steps, range steps, and named months/weekdays.
-- Sunday represented by either `0` or `7`.
-- Classic day-of-month/day-of-week matching semantics.
-- Local-time scheduling with explicit daylight-saving behavior.
-- Next-occurrence calculation instead of continuous polling.
-- Scoped `KEY=VALUE` environment assignments.
-- Per-job working directories.
-- Shell-compatible Windows command execution through `%COMSPEC%`.
-- Captured exit code, standard output, standard error, timestamps, and duration.
-- Graceful shutdown with child-process-tree cleanup.
-- Per-job overlap policies, execution timeouts, and bounded captured output.
-- Live job output with rotating structured JSON logs.
-- Single-instance protection for each configuration file.
-- Automatic, atomic configuration reload with last-known-good fallback.
-- Foreground and native Windows Service hosting modes.
-- Stable user-defined job identifiers.
-- Unit and integration test coverage.
-- Validation rejects schedules that can never produce a calendar occurrence.
-- Empty configurations keep the scheduler idle and ready instead of terminating unexpectedly.
+## Why WinCron?
 
-## Requirements
+Moving an automation script to Windows should not require translating its schedule into a collection of Task Scheduler dialogs, triggers, and actions. WinCron gives developers and operators a simple path: copy the command, keep the familiar schedule, and run it as a managed Windows daemon.
 
-- Windows x64.
-- The release installer includes the .NET runtime; no SDK or separate runtime is required.
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) is required only to build from source.
-
-## Install
-
-Download `wincron-setup.exe` from the matching GitHub Release and run it as an administrator. The installer:
-
-- Installs the self-contained executable under `C:\Program Files\WinCron` and adds it to the machine `PATH`.
-- Creates `C:\ProgramData\WinCron\config.wc` only when it does not already exist.
-- Preserves configuration and logs during upgrades and uninstall.
-- Installs the automatic `WinCron` Windows Service with restart-on-failure recovery.
-- Starts WinCron at boot without requiring an interactive login.
-
-The service runs as LocalSystem, so every configured command runs with machine-level privileges. Only administrators should be allowed to modify `C:\ProgramData\WinCron\config.wc`. Use foreground mode under a normal user account when elevated execution is not required.
+| | Windows Task Scheduler | Linux cron | WinCron |
+| --- | --- | --- | --- |
+| Primary interface | GUI, PowerShell, or XML | Crontab text | Crontab-style text |
+| Five-field cron expressions | Requires translation | Native | Native supported subset |
+| Existing Windows commands and scripts | Native | Requires a compatibility layer | Native through `%COMSPEC%` |
+| Starts automatically at boot | Yes | Yes | Yes, as a Windows Service |
+| Applies text-file changes automatically | Task must be recreated or updated | Yes | Yes, with last-known-good fallback |
+| Execution history | Windows event/task history | Syslog or mail | Live terminal output and rotating JSON Lines logs |
+| Best fit | Windows-specific task orchestration | Unix-like systems | Developers bringing cron-style automation to Windows |
 
 ## Quick start
 
-Build the project:
+### 1. Install
 
-```powershell
-dotnet build WinCron.sln --configuration Release
-```
+Download the latest [`wincron-setup.exe`](https://github.com/JackScott7/wincron/releases/latest/download/wincron-setup.exe) and run it as an administrator.
 
-Create `%USERPROFILE%\wincron\config.wc`:
+The installer includes the .NET runtime, adds `wincron` to the machine `PATH`, creates the service configuration, and starts WinCron automatically. No SDK or separate runtime is required.
+
+### 2. Add a job
+
+Edit `C:\ProgramData\WinCron\config.wc`:
 
 ```text
 # Every five minutes
@@ -69,19 +46,59 @@ Create `%USERPROFILE%\wincron\config.wc`:
 30 9 * * MON-FRI powershell.exe -NoProfile -File C:\jobs\report.ps1
 ```
 
-Start WinCron:
+### 3. Validate it
 
 ```powershell
-dotnet run --project WinCron.csproj
+wincron --test --config C:\ProgramData\WinCron\config.wc
 ```
 
-Press `Ctrl+C` for graceful shutdown.
+Save the file and you are done. The running service validates and activates the complete replacement configuration automatically. If an edit is invalid or temporarily incomplete, WinCron reports it and keeps the last valid schedule running.
 
-Changes saved to the active `config.wc` are validated and reloaded automatically. If a replacement file is invalid or temporarily unavailable, WinCron reports the error and continues using the last valid configuration.
+To run interactively under your own account instead:
+
+```powershell
+wincron --config "$env:USERPROFILE\wincron\config.wc"
+```
+
+## Built to schedule, not to poll
+
+> WinCron calculates the next occurrence for each job, orders upcoming work by UTC instant, and sleeps until something is due. It does not wake every second to scan the entire configuration.
+
+That design keeps idle work low, avoids depending on an exact “second zero” polling tick, and gives clock changes, missed occurrences, and duplicate prevention explicit scheduling semantics.
+
+## Features
+
+### Scheduling
+
+- Five-field cron expressions with exact values, wildcards, lists, ranges, steps, and named months or weekdays.
+- Sunday represented by either `0` or `7`, with classic day-of-month/day-of-week matching.
+- Local-time scheduling with documented daylight-saving and misfire behavior.
+- Calculated next occurrences, stable job identifiers, and impossible-schedule validation.
+
+### Execution
+
+- Windows shell execution through `%COMSPEC%` with the original command preserved.
+- Scoped environment assignments and per-job working directories.
+- `Allow`, `Skip`, `QueueOne`, and `TerminatePrevious` overlap policies.
+- Per-job timeouts, live stdout/stderr, bounded capture, exit codes, timestamps, and duration.
+
+### Reliability
+
+- Native Windows Service hosting, automatic startup, and restart-on-failure recovery.
+- Atomic configuration reload with last-known-good fallback.
+- Single-instance protection for each normalized configuration path.
+- Graceful cancellation, child-process-tree cleanup, rotating JSON logs, and isolated log sinks.
+
+### Developer experience
+
+- One readable configuration file instead of generated task definitions.
+- Read-only configuration validation and listing commands.
+- Self-contained x64 installer with no end-user .NET dependency.
+- Modern C# modules, strict analyzers, Windows CI, and unit/integration coverage.
 
 ## Command line
 
-Running `wincron` without arguments starts the scheduler with `%USERPROFILE%\wincron\config.wc`.
+Running `wincron` without arguments starts the foreground scheduler with `%USERPROFILE%\wincron\config.wc`.
 
 | Argument | Behavior |
 | --- | --- |
@@ -91,7 +108,7 @@ Running `wincron` without arguments starts the scheduler with `%USERPROFILE%\win
 | `-V`, `--version` | Print the WinCron version and exit. |
 | `-h`, `--help` | Print usage information and exit. |
 
-`--config` can be combined with normal execution, `--test`, or `--list`:
+Examples:
 
 ```powershell
 wincron --config C:\jobs\custom.wc
@@ -99,99 +116,98 @@ wincron --test --config C:\jobs\custom.wc
 wincron --list --config C:\jobs\custom.wc
 ```
 
-Successful operations return exit code `0`, invalid configurations or runtime failures return `1`, and invalid command-line usage returns `2`.
+Successful operations return `0`, invalid configurations or runtime failures return `1`, and invalid command-line usage returns `2`.
 
-`--test` and `--list` are read-only. When an explicitly selected configuration file does not exist, WinCron reports an error and does not create the file. Normal scheduler startup continues to create the default configuration on first use.
-
-WinCron currently uses its documented UTC-instant DST policy: nonexistent spring-forward local minutes are skipped, while repeated fall-back minutes run for both UTC instants. This differs from cron implementations that compensate fixed-time jobs across short clock changes.
+`--test` and `--list` are read-only. They report a missing explicitly selected file without creating it. Normal foreground startup retains backward-compatible first-run creation of `%USERPROFILE%\wincron\config.wc`.
 
 ## Configuration
 
-Each job contains five schedule fields followed by its command:
+Each job has five schedule fields followed by its command:
 
 ```text
 minute hour day-of-month month day-of-week command
 ```
 
-Environment assignments affect subsequent jobs:
+Environment and execution settings apply to subsequent jobs:
 
 ```text
-REPORT_MODE=daily
+WINCRON_JOB_ID=weekday-report
 WINCRON_WORKING_DIRECTORY=C:\jobs\reports
+WINCRON_OVERLAP_POLICY=QueueOne
+WINCRON_TIMEOUT_SECONDS=900
+WINCRON_MAX_OUTPUT_CHARACTERS=1048576
+REPORT_MODE=daily
+
 0 8 * * MON-FRI powershell.exe -NoProfile -File .\report.ps1
 ```
 
-Execution controls are also scoped to subsequent jobs:
+Job identifiers contain 1–64 letters, digits, dots, underscores, or hyphens, start with a letter or digit, and must be unique.
 
-```text
-# Allow, Skip, QueueOne, or TerminatePrevious; Skip is the default.
-WINCRON_OVERLAP_POLICY=QueueOne
-
-# Positive timeout in seconds and captured characters per output stream.
-WINCRON_TIMEOUT_SECONDS=900
-WINCRON_MAX_OUTPUT_CHARACTERS=1048576
-
-*/5 * * * * powershell.exe -NoProfile -File C:\jobs\report.ps1
-```
-
-Use a stable identifier before a job when its identity must survive line movement during configuration reload:
-
-```text
-WINCRON_JOB_ID=nightly-backup
-0 2 * * * powershell.exe -NoProfile -File C:\jobs\backup.ps1
-```
-
-Identifiers contain 1-64 letters, digits, dots, underscores, or hyphens, must start with a letter or digit, and must be unique.
-
-See [WinCron configuration](docs/CONFIGURATION.md) for the complete grammar, matching rules, environment behavior, working-directory convention, DST policy, and logging details.
+See [WinCron configuration](docs/CONFIGURATION.md) for the complete grammar, environment scoping, working-directory behavior, execution controls, DST policy, and reload semantics.
 
 ## Logs
 
-Standard output and standard error are forwarded to the terminal while a job runs. When it finishes, WinCron prints its command, outcome, and duration. The bounded captured output is appended as a JSON object to:
+WinCron forwards stdout and stderr while a foreground job runs and records every completed execution as JSON Lines. Logs live in an `output` directory beside the selected configuration:
 
 ```text
 %USERPROFILE%\wincron\output\runs.jsonl
+C:\ProgramData\WinCron\output\runs.jsonl
 ```
 
-Records include the scheduled occurrence, start and completion times, duration, command, exit code, bounded standard output and error, truncation flags, cancellation and timeout state, and process-start errors. `runs.jsonl` rotates at 10 MiB and retains five rotated files by default. Logs are stored in an `output` directory beside the selected configuration file.
+Records contain job identity, command, scheduled/start/completion times, duration, exit code, bounded output, truncation flags, cancellation state, timeout state, and startup errors. The active log rotates at 10 MiB and retains five rotated files by default.
 
-## Testing
+## Service security
+
+> [!IMPORTANT]
+> The release installer runs the WinCron service as LocalSystem so jobs can run at boot without an interactive user. Commands therefore execute with machine-level privileges. Only administrators should be able to modify `C:\ProgramData\WinCron\config.wc`.
+
+Use foreground mode under a normal user account when elevated execution is not required.
+
+The installer places WinCron under `C:\Program Files\WinCron`, preserves configuration and logs during upgrades or uninstall, configures service recovery, and removes the executable and service registration cleanly.
+
+## Build from source
+
+Requirements:
+
+- Windows x64.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```powershell
-dotnet test WinCron.sln --configuration Release
+dotnet restore WinCron.sln
+dotnet build WinCron.sln --configuration Release --no-restore
+dotnet test WinCron.sln --configuration Release --no-build
+dotnet run --project WinCron.csproj
 ```
 
-The suite covers parsing, validation, object initialization, environment scoping, cron matching, DST transitions, clock jumps, duplicate prevention, multi-job timing, command execution, working directories, output capture, errors, and structured logging.
+Create a self-contained executable:
+
+```powershell
+dotnet publish WinCron.csproj --configuration Release --runtime win-x64 --self-contained true
+```
+
+The suite covers parsing, validation, object initialization, cron matching, DST transitions, clock jumps, reload behavior, overlap policies, timeouts, command execution, output capture, service lifecycle, configuration files, and structured logging.
 
 ## Project structure
 
 ```text
-Configuration/  Configuration loading and crontab parsing
-Domain/         Immutable cron fields, expressions, and job definitions
-Execution/      Command-shell execution and structured logging
+Application/    CLI orchestration and single-instance ownership
+CommandLine/    Argument parsing, modes, and usage text
+Configuration/  Configuration loading, parsing, and file watching
+Domain/         Immutable cron expressions, jobs, and execution policies
+Execution/      Shell execution, bounded output, and structured logging
 Hosting/        Windows Service and Generic Host integration
-Scheduling/     Next-occurrence calculation and dispatch loop
+Scheduling/     Next-occurrence calculation, reload, and dispatch control
 installer/      Inno Setup definition and initial service configuration
 .github/        Windows CI and signed release workflows
 tests/          Unit and integration tests
 ```
 
-The implementation status and completed milestones are recorded in [ROADMAP.md](ROADMAP.md). Release history is available in [CHANGELOG.md](CHANGELOG.md).
+## Project status and releases
 
-Release maintainers should also read [Releasing WinCron](docs/RELEASING.md) for signing secrets, tag/version requirements, installer generation, and deployment recording.
+The implementation status and remaining work are tracked honestly in [ROADMAP.md](ROADMAP.md). Release history is in [CHANGELOG.md](CHANGELOG.md), and maintainers can follow [Releasing WinCron](docs/RELEASING.md) for signing, versioning, installer generation, and GitHub publishing.
 
-## Windows Service hosting
+Tagged release workflows require the `WINDOWS_SIGNING_CERTIFICATE_BASE64` and `WINDOWS_SIGNING_CERTIFICATE_PASSWORD` repository secrets. They Authenticode-sign `wincron.exe` and `wincron-setup.exe`, verify both signatures, and publish a SHA-256 checksum.
 
-`--service` is an internal host switch intended for the Windows Service Control Manager. A service installation should always provide a machine-level configuration path:
+## License
 
-```powershell
-sc.exe create WinCron start= auto binPath= '"C:\Program Files\WinCron\wincron.exe" --service --config "C:\ProgramData\WinCron\config.wc"'
-sc.exe failure WinCron reset= 86400 actions= restart/5000/restart/15000/restart/60000
-sc.exe start WinCron
-```
-
-The release installer automates this setup, service recovery, upgrades, and removal. Foreground use remains non-administrative and backward compatible.
-
-## Release signing
-
-Tagged release workflows require the `WINDOWS_SIGNING_CERTIFICATE_BASE64` and `WINDOWS_SIGNING_CERTIFICATE_PASSWORD` repository secrets. The workflow Authenticode-signs both `wincron.exe` and `wincron-setup.exe`, verifies the signatures, and publishes a SHA-256 checksum. Manual workflow runs can build unsigned test artifacts but do not publish a release.
+WinCron is available under the [MIT License](LICENSE).

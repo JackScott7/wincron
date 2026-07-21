@@ -20,6 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Changed the target framework to the explicit Windows target and made release publishing self-contained.
 - Changed structured log placement to the selected configuration directory so the service uses `C:\ProgramData\WinCron\output`.
+- Reworked the README around WinCron's migration use case, install-first quick start, product comparison, grouped capabilities, and calculated next-occurrence architecture.
 
 ### Fixed
 
