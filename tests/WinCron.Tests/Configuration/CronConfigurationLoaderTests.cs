@@ -48,6 +48,39 @@ public sealed class CronConfigurationLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsyncReturnsContentWithoutModifyingExistingConfiguration()
+    {
+        Directory.CreateDirectory(temporaryDirectory);
+        var configurationPath = Path.Combine(temporaryDirectory, "config.wc");
+        const string expectedConfiguration = "* * * * * echo test";
+        await File.WriteAllTextAsync(
+            configurationPath,
+            expectedConfiguration,
+            TestContext.Current.CancellationToken);
+        var lastWriteTime = File.GetLastWriteTimeUtc(configurationPath);
+        var loader = new CronConfigurationLoader(configurationPath);
+
+        var configuration = await loader.ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedConfiguration, configuration);
+        Assert.Equal(lastWriteTime, File.GetLastWriteTimeUtc(configurationPath));
+    }
+
+    [Fact]
+    public async Task ReadAsyncThrowsAndDoesNotCreateMissingConfiguration()
+    {
+        var configurationPath = Path.Combine(temporaryDirectory, "nested", "config.wc");
+        var loader = new CronConfigurationLoader(configurationPath);
+
+        var exception = await Assert.ThrowsAsync<FileNotFoundException>(
+            () => loader.ReadAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(configurationPath, exception.FileName);
+        Assert.False(File.Exists(configurationPath));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(configurationPath)));
+    }
+
+    [Fact]
     public async Task LoadAsyncCopiesLegacyConfigurationWhenNewPathIsMissing()
     {
         Directory.CreateDirectory(temporaryDirectory);

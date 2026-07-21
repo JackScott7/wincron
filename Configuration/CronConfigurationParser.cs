@@ -105,6 +105,15 @@ public sealed partial class CronConfigurationParser
         }
 
         var schedule = new CronExpression(fields[0], fields[1], fields[2], fields[3], fields[4]);
+        if (!schedule.HasPossibleOccurrence())
+        {
+            errors.Add(new CronParseError(
+                lineNumber,
+                "The schedule can never produce a calendar occurrence.",
+                line));
+            return;
+        }
+
         var workingDirectory = environmentVariables.TryGetValue(WorkingDirectoryVariableName, out var configuredDirectory)
             && !string.IsNullOrWhiteSpace(configuredDirectory)
                 ? Environment.ExpandEnvironmentVariables(configuredDirectory)

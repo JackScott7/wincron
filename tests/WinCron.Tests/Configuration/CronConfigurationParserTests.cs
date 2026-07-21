@@ -76,4 +76,25 @@ public sealed class CronConfigurationParserTests
         Assert.True(result.IsValid);
         Assert.Equal("cmd.exe /c set VALUE=42", Assert.Single(result.Configuration.Jobs).CommandText);
     }
+
+    [Fact]
+    public void ParseRejectsScheduleThatCanNeverProduceAnOccurrence()
+    {
+        var result = parser.Parse("0 0 31 FEB * echo impossible");
+
+        Assert.False(result.IsValid);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(1, error.LineNumber);
+        Assert.Contains("never produce", error.Message);
+        Assert.Empty(result.Configuration.Jobs);
+    }
+
+    [Fact]
+    public void ParseAcceptsRestrictedWeekdayThatMakesOtherwiseImpossibleDateValid()
+    {
+        var result = parser.Parse("0 0 31 FEB MON echo monday");
+
+        Assert.True(result.IsValid);
+        Assert.Single(result.Configuration.Jobs);
+    }
 }

@@ -63,6 +63,34 @@ public sealed class CronExpression
         return dayOfMonthMatches || dayOfWeekMatches;
     }
 
+    public bool HasPossibleOccurrence()
+    {
+        // Four hundred years cover a complete Gregorian calendar cycle.
+        for (var year = 2000; year < 2400; year++)
+        {
+            foreach (var month in Month.AllowedValues)
+            {
+                var daysInMonth = DateTime.DaysInMonth(year, month);
+                for (var day = 1; day <= daysInMonth; day++)
+                {
+                    var candidate = new DateTime(year, month, day);
+                    var dayOfMonthMatches = DayOfMonth.Matches(day);
+                    var dayOfWeekMatches = DayOfWeek.Matches((int)candidate.DayOfWeek);
+
+                    if ((DayOfMonth.IsWildcard && dayOfWeekMatches)
+                        || (DayOfWeek.IsWildcard && dayOfMonthMatches)
+                        || (!DayOfMonth.IsWildcard && !DayOfWeek.IsWildcard
+                            && (dayOfMonthMatches || dayOfWeekMatches)))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     public override string ToString() =>
         $"{Minute.Source} {Hour.Source} {DayOfMonth.Source} {Month.Source} {DayOfWeek.Source}";
 

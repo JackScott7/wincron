@@ -24,6 +24,8 @@ WinCron reads a familiar five-field crontab, calculates future occurrences witho
 - Captured exit code, standard output, standard error, timestamps, and duration.
 - Graceful shutdown with child-process-tree cleanup.
 - Unit and integration test coverage.
+- Validation rejects schedules that can never produce a calendar occurrence.
+- Empty configurations keep the scheduler idle and ready instead of terminating unexpectedly.
 
 ## Requirements
 
@@ -77,6 +79,10 @@ wincron --list --config C:\jobs\custom.wc
 ```
 
 Successful operations return exit code `0`, invalid configurations or runtime failures return `1`, and invalid command-line usage returns `2`.
+
+`--test` and `--list` are read-only. When an explicitly selected configuration file does not exist, WinCron reports an error and does not create the file. Normal scheduler startup continues to create the default configuration on first use.
+
+WinCron currently uses its documented UTC-instant DST policy: nonexistent spring-forward local minutes are skipped, while repeated fall-back minutes run for both UTC instants. This differs from cron implementations that compensate fixed-time jobs across short clock changes.
 
 ## Configuration
 

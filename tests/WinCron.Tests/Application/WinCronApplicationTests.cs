@@ -31,7 +31,7 @@ public sealed class WinCronApplicationTests : IDisposable
         var exitCode = await application.RunAsync(["-V"], TestContext.Current.CancellationToken);
 
         Assert.Equal(WinCronApplication.SuccessExitCode, exitCode);
-        Assert.Equal($"WinCron 1.2.0{Environment.NewLine}", output.ToString());
+        Assert.Equal($"WinCron 1.2.1{Environment.NewLine}", output.ToString());
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -86,6 +86,26 @@ public sealed class WinCronApplicationTests : IDisposable
         Assert.Equal(string.Empty, output.ToString());
         Assert.Contains("Line 1:", error.ToString());
         Assert.Contains("Line 2:", error.ToString());
+    }
+
+    [Theory]
+    [InlineData("--test")]
+    [InlineData("--list")]
+    public async Task ReadOnlyModeReportsMissingCustomConfigurationWithoutCreatingIt(string mode)
+    {
+        var configurationPath = Path.Combine(temporaryDirectory, "missing", "config.wc");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = new WinCronApplication(output, error);
+
+        var exitCode = await application.RunAsync(
+            [mode, "--config", configurationPath],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(WinCronApplication.RuntimeErrorExitCode, exitCode);
+        Assert.Contains("does not exist", error.ToString());
+        Assert.False(File.Exists(configurationPath));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(configurationPath)));
     }
 
     [Fact]

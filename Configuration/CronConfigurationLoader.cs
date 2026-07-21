@@ -43,4 +43,16 @@ public sealed class CronConfigurationLoader
 
         return await File.ReadAllTextAsync(ConfigurationPath, cancellationToken);
     }
+
+    public Task<string> ReadAsync(CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(ConfigurationPath))
+        {
+            throw new FileNotFoundException(
+                $"The WinCron configuration file does not exist: {ConfigurationPath}",
+                ConfigurationPath);
+        }
+
+        return File.ReadAllTextAsync(ConfigurationPath, cancellationToken);
+    }
 }

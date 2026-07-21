@@ -35,6 +35,21 @@ public sealed class CronExpressionTests
         Assert.False(expression.Matches(new DateTime(2026, 6, 16, 12, 0, 0)));
     }
 
+    [Theory]
+    [InlineData("31", "FEB", "*", false)]
+    [InlineData("29", "FEB", "*", true)]
+    [InlineData("31", "FEB", "MON", true)]
+    public void HasPossibleOccurrenceCoversCompleteGregorianCalendarCycle(
+        string dayOfMonth,
+        string month,
+        string dayOfWeek,
+        bool expected)
+    {
+        var expression = CreateExpression("0", "0", dayOfMonth, month, dayOfWeek);
+
+        Assert.Equal(expected, expression.HasPossibleOccurrence());
+    }
+
     private static CronExpression CreateExpression(
         string minute,
         string hour,

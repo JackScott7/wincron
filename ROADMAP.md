@@ -68,25 +68,25 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 ### 2.1 Empty and unschedulable configurations
 
-- [ ] Keep WinCron alive when the configuration contains zero jobs instead of exiting after printing the running banner.
-- [ ] Report an explicit idle-state message when no jobs are currently scheduled.
-- [ ] Detect semantically impossible schedules such as `0 0 31 2 *` during validation.
-- [ ] Return a clear line-specific error for a schedule that can never produce an occurrence.
-- [ ] Ensure one impossible job cannot silently disappear while other jobs continue running.
-- [ ] Add tests for empty, all-impossible, and mixed valid/impossible configurations.
+- [x] Keep WinCron alive when the configuration contains zero jobs instead of exiting after printing the running banner.
+- [x] Report an explicit idle-state message when no jobs are currently scheduled.
+- [x] Detect semantically impossible schedules such as `0 0 31 2 *` during validation.
+- [x] Return a clear line-specific error for a schedule that can never produce an occurrence.
+- [x] Ensure one impossible job cannot silently disappear while other jobs continue running.
+- [x] Add tests for empty, all-impossible, and mixed valid/impossible configurations.
 
 ### 2.2 Read-only CLI operations
 
-- [ ] Separate configuration creation from configuration reading.
-- [ ] Ensure `--test` never creates or modifies an explicitly supplied configuration file.
-- [ ] Ensure `--list` never creates or modifies an explicitly supplied configuration file.
-- [ ] Return a runtime error when an explicitly supplied configuration file does not exist.
-- [ ] Preserve first-run creation behavior only for the default scheduler configuration.
-- [ ] Add filesystem tests proving that validation and listing are read-only.
+- [x] Separate configuration creation from configuration reading.
+- [x] Ensure `--test` never creates or modifies an explicitly supplied configuration file.
+- [x] Ensure `--list` never creates or modifies an explicitly supplied configuration file.
+- [x] Return a runtime error when an explicitly supplied configuration file does not exist.
+- [x] Preserve first-run creation behavior only for the default scheduler configuration.
+- [x] Add filesystem tests proving that validation and listing are read-only.
 
 ### 2.3 Scheduler diagnostics
 
-- [ ] Report when a job has no future occurrence instead of silently excluding it from the queue.
+- [x] Report when a job has no future occurrence instead of silently excluding it from the queue.
 - [ ] Route scheduler and dispatch errors through an injected logging abstraction rather than writing directly to global `Console.Error`.
 - [ ] Ensure a failing diagnostic or log sink does not hide the original scheduler or execution failure.
 
@@ -99,9 +99,9 @@ Goal: develop WinCron from a functional foreground scheduler into a reliable, di
 
 ### 2.5 DST documentation accuracy
 
-- [ ] Stop describing the current DST behavior as complete classic-cron parity until compatibility is finalized.
-- [ ] Clearly distinguish the current WinCron DST policy from Vixie Cron, Debian cron, and Cronie behavior.
-- [ ] Add regression tests tied to the documented policy so implementation and documentation cannot drift.
+- [x] Stop describing the current DST behavior as complete classic-cron parity until compatibility is finalized.
+- [x] Clearly distinguish the current WinCron DST policy from Vixie Cron, Debian cron, and Cronie behavior.
+- [x] Add regression tests tied to the documented policy so implementation and documentation cannot drift.
 
 ## 3. Production execution controls — target v1.3.0
 

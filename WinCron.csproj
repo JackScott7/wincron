@@ -8,9 +8,9 @@
     <SignAssembly>True</SignAssembly>
     <Title>WinCron</Title>
     <Description>Classic cron-style job scheduling for Windows.</Description>
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
+    <Version>1.2.1</Version>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
+    <FileVersion>1.2.1.0</FileVersion>
     <PackageProjectUrl>https://wincron.syntaxly.xyz</PackageProjectUrl>
     <RepositoryUrl>https://github.com/JackScott7/wincron</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

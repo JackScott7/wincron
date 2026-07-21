@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-21
+
+### Changed
+
+- Changed `--test` and `--list` into read-only operations that report missing explicitly selected configuration files instead of creating them.
+- Changed an empty scheduler into an idle scheduler that remains active until canceled.
+
+### Fixed
+
+- Fixed semantically impossible calendar schedules being accepted, scanned minute by minute for eight years, and then silently discarded.
+- Fixed the scheduler exiting immediately after reporting that it was running when no jobs were configured.
+
 ## [1.2.0] - 2026-07-21
 
 ### Added

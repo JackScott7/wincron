@@ -38,6 +38,12 @@ public sealed class CronScheduler
 
         try
         {
+            if (scheduleQueue.Count == 0)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, cancellationToken);
+                return;
+            }
+
             while (!cancellationToken.IsCancellationRequested && scheduleQueue.Count > 0)
             {
                 scheduleQueue.TryPeek(out _, out var nextOccurrenceUtc);
@@ -114,10 +120,13 @@ public sealed class CronScheduler
         DateTimeOffset afterUtc)
     {
         var nextOccurrence = CronOccurrenceCalculator.GetNextOccurrence(job.Schedule, afterUtc, options.TimeZone);
-        if (nextOccurrence is not null)
+        if (nextOccurrence is null)
         {
-            queue.Enqueue(new ScheduledJob(job, nextOccurrence.Value), nextOccurrence.Value);
+            throw new InvalidOperationException(
+                $"Job '{job.Id}' has no occurrence within the supported scheduling horizon.");
         }
+
+        queue.Enqueue(new ScheduledJob(job, nextOccurrence.Value), nextOccurrence.Value);
     }
 
     private void TrackDispatch(Task dispatchTask)

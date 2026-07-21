@@ -6,6 +6,38 @@ namespace WinCron.Tests.Scheduling;
 public sealed class CronSchedulerTests
 {
     [Fact]
+    public async Task RunAsyncRemainsIdleUntilCanceledWhenNoJobsAreConfigured()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        var scheduler = new CronScheduler(
+            [],
+            new RecordingJobDispatcher(),
+            new CronSchedulerOptions { TimeZone = TimeZoneInfo.Utc });
+
+        var schedulerTask = scheduler.RunAsync(cancellationSource.Token);
+        await Task.Yield();
+
+        Assert.False(schedulerTask.IsCompleted);
+        await cancellationSource.CancelAsync();
+        await schedulerTask;
+    }
+
+    [Fact]
+    public async Task RunAsyncReportsProgrammaticallyConstructedUnschedulableJob()
+    {
+        var scheduler = new CronScheduler(
+            [CreateJob("0", "0", "31", "FEB", "*")],
+            new RecordingJobDispatcher(),
+            new CronSchedulerOptions { TimeZone = TimeZoneInfo.Utc });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => scheduler.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("line-1", exception.Message);
+        Assert.Contains("no occurrence", exception.Message);
+    }
+
+    [Fact]
     public async Task RunAsyncDispatchesOccurrenceOnceWhenItBecomesDue()
     {
         var cancellationSource = new CancellationTokenSource();

@@ -82,7 +82,8 @@ public sealed class WinCronApplication
         WinCronCommandLineOptions options,
         CancellationToken cancellationToken)
     {
-        var (loader, parseResult) = await LoadAndParseConfigurationAsync(options, cancellationToken);
+        var loader = CreateConfigurationLoader(options.ConfigurationPath);
+        var parseResult = await ReadAndParseConfigurationAsync(loader, cancellationToken);
         if (!parseResult.IsValid)
         {
             await WriteConfigurationErrorsAsync(parseResult.Errors);
@@ -99,7 +100,7 @@ public sealed class WinCronApplication
         CancellationToken cancellationToken)
     {
         var loader = CreateConfigurationLoader(options.ConfigurationPath);
-        var configurationText = await loader.LoadAsync(cancellationToken);
+        var configurationText = await loader.ReadAsync(cancellationToken);
         await standardOutput.WriteAsync(configurationText);
         return SuccessExitCode;
     }
@@ -108,7 +109,9 @@ public sealed class WinCronApplication
         WinCronCommandLineOptions options,
         CancellationToken cancellationToken)
     {
-        var (loader, parseResult) = await LoadAndParseConfigurationAsync(options, cancellationToken);
+        var loader = CreateConfigurationLoader(options.ConfigurationPath);
+        var configurationText = await loader.LoadAsync(cancellationToken);
+        var parseResult = new CronConfigurationParser().Parse(configurationText);
         if (!parseResult.IsValid)
         {
             await WriteConfigurationErrorsAsync(parseResult.Errors);
@@ -117,6 +120,11 @@ public sealed class WinCronApplication
 
         await standardOutput.WriteLineAsync(
             $"WinCron loaded {parseResult.Configuration.Jobs.Count} job(s) from {loader.ConfigurationPath}.");
+        if (parseResult.Configuration.Jobs.Count == 0)
+        {
+            await standardOutput.WriteLineAsync("No jobs are configured. WinCron will remain idle until stopped.");
+        }
+
         await standardOutput.WriteLineAsync(
             $"Schedules use the '{TimeZoneInfo.Local.DisplayName}' time zone. Press Ctrl+C to stop.");
 
@@ -142,15 +150,13 @@ public sealed class WinCronApplication
             ? new CronConfigurationLoader()
             : new CronConfigurationLoader(configurationPath);
 
-    private static async Task<(CronConfigurationLoader Loader, CronConfigurationParseResult ParseResult)>
-        LoadAndParseConfigurationAsync(
-            WinCronCommandLineOptions options,
-            CancellationToken cancellationToken)
+    private static async Task<CronConfigurationParseResult> ReadAndParseConfigurationAsync(
+        CronConfigurationLoader loader,
+        CancellationToken cancellationToken)
     {
-        var loader = CreateConfigurationLoader(options.ConfigurationPath);
-        var configurationText = await loader.LoadAsync(cancellationToken);
+        var configurationText = await loader.ReadAsync(cancellationToken);
         var parser = new CronConfigurationParser();
-        return (loader, parser.Parse(configurationText));
+        return parser.Parse(configurationText);
     }
 
     private async Task WriteConfigurationErrorsAsync(IReadOnlyList<CronParseError> errors)
