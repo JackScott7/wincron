@@ -87,10 +87,10 @@ jobs:
               -FilePath $publicCertificatePath |
               Out-Null
 
-            Import-Certificate `
-              -FilePath $publicCertificatePath `
-              -CertStoreLocation 'Cert:\CurrentUser\Root' |
-              Out-Null
+            & certutil.exe -user -addstore -f Root $publicCertificatePath
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to trust the self-signed certificate (certutil exit code $LASTEXITCODE)."
+            }
 
             Write-Warning 'Using a self-signed certificate trusted only on this workflow runner.'
           }
