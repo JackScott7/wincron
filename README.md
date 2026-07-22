@@ -5,6 +5,21 @@
 <h1 align="center">WinCron</h1>
 
 <p align="center">
+  <a href="https://github.com/JackScott7/wincron/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/JackScott7/wincron/ci.yml?branch=main&label=CI&logo=githubactions" alt="CI">
+  </a>
+  <a href="https://github.com/JackScott7/wincron/actions/workflows/release.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/JackScott7/wincron/release.yml?label=Release&logo=githubactions" alt="Release">
+  </a>
+  <a href="https://github.com/JackScott7/wincron/releases/latest">
+    <img src="https://img.shields.io/github/v/release/JackScott7/wincron?label=Version&logo=github" alt="Latest version">
+  </a>
+  <a href="https://github.com/JackScott7/wincron/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/JackScott7/wincron?label=License" alt="License">
+  </a>
+</p>
+
+<p align="center">
   <strong>Run cron-style jobs on Windows without rebuilding every schedule in Task Scheduler.</strong>
 </p>
 
